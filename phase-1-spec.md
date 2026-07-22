@@ -92,11 +92,11 @@ Dream Spirits currently manages barrel selection requests across private groups 
 #### Customer Intake
 - [ ] Contact form with fields: Name, Email, Phone, Shipping Address (street, city, state, zip)
 - [ ] Customer type selector: "Private Group" or "Retailer"
-- [ ] If Retailer: State dropdown to assign distributor
+- [ ] If Retailer: State dropdown to assign distributor, plus an address-type selector ("Store location" or "Warehouse/distribution address") since this varies by retailer
 - [ ] Acceptance: Form validates all required fields, stores customer record, assigns distributor for retailers
 
 #### Barrel Inventory & Sample Selection
-- [ ] Admin panel for Prav to upload barrel inventory (barrel number, age, distillery, description, price for private groups, price for retailers)
+- [ ] Admin panel for Prav to upload barrel inventory (barrel number, age, distillery, description, price for private groups, price for retailers, estimated bottle count)
 - [ ] Customer-facing page showing available barrels with descriptions
 - [ ] Customer can select which barrels to request samples from (checkbox/multi-select)
 - [ ] Acceptance: Customer can select 1–X barrels, submit request, system stores selections
@@ -121,7 +121,7 @@ Dream Spirits currently manages barrel selection requests across private groups 
 
 #### Invoice Generation
 - [ ] System auto-generates invoice based on selected barrels and customer type (private group vs retailer pricing)
-- [ ] Invoice includes: Barrel number, age, distillery, quantity (bottle count from bottling phase — for now, default estimate), unit price, total
+- [ ] Invoice includes: Barrel number, age, distillery, quantity (uses the barrel's Prav-entered estimated bottle count until the actual bottling run is logged, then reflects the real count), unit price, total
 - [ ] Invoice is flagged if customer is a retailer (sends to distributor, not customer)
 - [ ] Invoice is viewable/downloadable as PDF in the app
 - [ ] Acceptance: Invoice is generated correctly with right prices; different price shown for retailer vs private group; invoice shows in both Prav's and customer's view
@@ -221,6 +221,7 @@ Dream Spirits currently manages barrel selection requests across private groups 
 ```
 Customers
   - id, name, email, phone, shipping_address
+  - address_type (store | warehouse) — retailers only
   - customer_type (private_group | retailer)
   - state (if retailer)
   - assigned_distributor
@@ -254,6 +255,7 @@ BOLs
 Barrels (Inventory)
   - id, barrel_number, age, distillery, description
   - price_private_group, price_retailer
+  - estimated_bottle_count (Prav-entered at listing time; used for invoicing until actual count is logged)
   - available (boolean)
 
 StatesToDistributors
@@ -264,12 +266,14 @@ StatesToDistributors
 
 ## Open Questions
 
-**Blocking** (need answers before starting):
-- [ ] **Pricing**: Does private group price always differ from retailer price? By how much?
-- [ ] **Distributor States**: Which states go to which distributors? Provide the mapping.
-- [ ] **Payment Instructions**: What are the exact wiring instructions to display on invoices?
-- [ ] **Shipping Address**: For retailers, is the shipping address the store location or a warehouse?
-- [ ] **Bottle Quantity**: How do you estimate bottles per barrel? Is it always the same, or does it vary? For Phase 1, should we use a fixed estimate or require Prav to enter it manually?
+**Resolved**:
+- [x] **Pricing**: No formula — Prav sets private-group price and retailer price independently per barrel at listing time. (Schema already supports this: `price_private_group`, `price_retailer` on Barrels.)
+- [x] **Shipping Address**: Varies by retailer — add an `address_type` field (store | warehouse) to the intake form rather than assuming one.
+- [x] **Bottle Quantity**: Prav enters a per-barrel estimate manually at listing time (barrels vary in fill/loss); this estimate drives invoicing until the real bottling-run count replaces it.
+
+**Data needed before launch, not before build starts** — these are admin-editable data (a lookup table and an invoice-template field), so the feature can be built now with placeholder values and populated with real data before onboarding actual customers:
+- [ ] **Distributor States**: Which states go to which distributors? Provide the mapping when available.
+- [ ] **Payment Instructions**: Exact wiring instructions to display on invoices. If you'd rather not put real bank details in a doc/chat, that's fine — enter them directly in the admin settings once the app is running.
 
 **Non-Blocking** (can resolve during implementation):
 - [ ] Do you want to let customers partially re-select (e.g., request 5 samples but only buy 2 of those 5)?
