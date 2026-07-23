@@ -21,8 +21,8 @@ The barrel-selection process today — from first outreach through sample shippi
 
 ## Non-Goals (v1)
 
-- **E-commerce/merch storefront** — real but separable problem; do later once the core pipeline is proven. (Phase 2+)
-- **LTO/release drop ordering** — different audience (broadcast to full customer list, not a tracked pipeline) and different urgency model (first-come-first-served at a moment in time). (Phase 2+)
+- **E-commerce/merch storefront** — real but separable problem; do later once the core pipeline is proven. (Add-on, post-core-loop)
+- **LTO/release drop ordering** — different audience (broadcast to full customer list, not a tracked pipeline) and different urgency model (first-come-first-served at a moment in time). (Add-on, post-core-loop)
 - **Native mobile app** — a responsive web app / Airtable interface is sufficient; no app-store distribution in v1.
 - **Direct payment processing (moving money)** — the platform tracks and confirms payment status; it does not execute wire transfers, charge cards, or move funds itself. Wires, checks, and any online payment stay in the customer's/distributor's own banking or payment tools.
 - **Full QuickBooks sync (two-way accounting)** — v1 tracks invoice/payment status in-platform; whether/how deeply this talks to QuickBooks is an open question, not a v1 commitment.
@@ -83,22 +83,36 @@ Each transition is the trigger point for a notification to whichever party owns 
 
 ## Requirements by Phase
 
+**Note on phase numbering**: The phases below describe the target end-state pipeline, broken out stage-by-stage per Prav's build-order framing. They are the *sequence* the platform grows into, not a commitment to build automation early — each phase still starts from whatever manual baseline Phase 1 established (in-app status, manual entry, no external API calls) and automates one stage at a time as it's built. Phase 1 is the only phase currently scoped for build; everything below it is directional until we scope it the same way.
+
 ### Phase 1 — see [phase-1-spec.md](phase-1-spec.md) for full detail
-Samples-by-mail flow only, for both private groups and retailers: intake → sample selection → manual sample shipment (Prav enters FedEx tracking) → customer selection + logo upload → auto-generated invoice (tiered pricing) → manual payment confirmation → manual BOL upload → order history + Prav's status dashboard. Notifications are in-app only; no automated email/SMS.
+Intake + samples-by-mail flow only, for both private groups and retailers: contact form + customer-type/distributor assignment → sample selection → manual sample shipment (Prav enters FedEx tracking) → customer selection + logo upload → auto-generated invoice (tiered pricing) → manual payment confirmation → manual BOL upload → order history + Prav's status dashboard. Notifications are in-app only; no automated email/SMS.
 
-### Phase 2 — automation + house visits
-- [ ] House-visit booking: brand-defined open dates → customer picks top choices → brand confirms → both notified → date blocked.
-- [ ] Automated pre-visit reminder (address/wifi/door code/rules) with e-signature waiver.
-- [ ] Label job record: auto-populates barrel details, notifies designer, tracks status through to a Google Drive link.
-- [ ] Auto-generated shipping labels via carrier (FedEx) API.
-- [ ] Automated email/SMS notifications for state transitions.
-- [ ] QuickBooks integration for distributor payments.
-- [ ] Freight/BOL carrier API integration (replacing manual upload).
-- [ ] Multi-user support for Prav's team (COO, bottling contractor, label designer as contributors with scoped access).
+### Phase 2 — pick-method automation (fork)
+- [ ] **2A Ship samples**: replace Phase 1's manual FedEx tracking entry with auto-generated shipping labels via carrier (FedEx) API; customer gets real-time tracking automatically instead of a manually-entered number.
+- [ ] **2B Host at the house**: calendar of brand-defined open dates → customer ranks top 2–3 → brand confirms one → both sides notified, date blocked → automated pre-visit reminder (~1 week out) with house address, wifi, door code, house rules, and an e-signature waiver.
 
-### Phase 3 — commerce expansion
+### Phase 3 — label creation automation
+- [ ] Label job record: auto-populates barrel specifics (age, distillery, barrel #, etc.) + customer logo, prompts the label designer, tracks status through to a finished file auto-dropped into Google Drive.
+- [ ] Batch cadence: every X days, finished labels are batched and sent to the printer.
+
+### Phase 4 — bottling & invoicing automation
+- [ ] Bottling guy logs actual output per barrel (e.g., barrel #34 → 150 bottles), replacing Phase 1's pre-bottling estimated count.
+- [ ] Invoice auto-regenerates from the real bottling count, still pulling tiered pricing (private group vs. retailer) from the backend.
+
+### Phase 5 — payment & fulfillment automation (fork by customer type)
+- [ ] **Private Group**: automated invoice + wiring-instructions send → customer uploads wire screenshot → Prav verifies, marks paid → freight carrier notified with delivery details (address, residential/commercial, dock) → carrier-integrated BOL creation (replacing Phase 1's manual upload) → customer tracks pallet.
+- [ ] **Retailer**: invoice auto-sent to distributor → distributor arranges pickup → distributor pays (online / QuickBooks / mailed check) → QuickBooks integration for payment status → Prav marks paid, loop closed.
+- [ ] Multi-user support for Prav's team (COO, bottling contractor, label designer as contributors with scoped access) — needed once this many roles touch a single pick.
+
+### Phase 6 — history & dashboards (post-loop analytics)
+- [ ] Customer-facing history: past visits, purchases, bottle counts, prices paid, receive dates, optional photos (builds on Phase 1's basic order history).
+- [ ] Distributor-facing history: invoice status, paid/unpaid, terms.
+- [ ] Brand-facing: sales, COGS, and profitability reporting (builds on Phase 1's dashboard with real financial analysis).
+
+### Add-ons (parallel track, any time after the core loop is validated)
 - [ ] E-commerce/merch storefront (hats, shirts, glasses, etc.).
-- [ ] LTO/new-release drop broadcast + first-access ordering link.
+- [ ] LTO/limited-release drop: broadcast to all customers with first-crack ordering via a direct link.
 - [ ] Online payment processing (Stripe/Square) in-platform.
 
 ## Open Questions
@@ -116,7 +130,7 @@ Still open — see phase-1-spec.md's **Blocking** open questions for the ones th
 
 ## Timeline Considerations
 
-No hard external deadline mentioned. Phase 1 effort estimate (~3–4 weeks) and full breakdown are in phase-1-spec.md. Phase 2 (house visits, automation, QuickBooks, freight API) and Phase 3 (e-com, LTO) follow once Phase 1 is live and validated with real customers — not yet estimated.
+No hard external deadline mentioned. Phase 1 effort estimate (~3–4 weeks) and full breakdown are in phase-1-spec.md. Phases 2–6 (pick-method automation, label automation, bottling/invoicing automation, payment/fulfillment automation, dashboards) and the add-ons (merch, LTO) follow once Phase 1 is live and validated with real customers — not yet estimated or scoped in detail.
 
 ## Success Metrics
 
