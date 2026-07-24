@@ -17,9 +17,9 @@
           extend: {
             colors: {
               noir: {
-                DEFAULT: "#0a0908",
-                50: "#161412",
-                100: "#100f0d",
+                DEFAULT: "#050505",
+                50: "#141414",
+                100: "#0d0d0d",
               },
               gold: {
                 DEFAULT: "#c9a86a",
@@ -42,7 +42,7 @@
       }
       body {
         font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-        background-color: #0a0908;
+        background-color: #050505;
         color: #f3ede0;
       }
 
@@ -53,7 +53,7 @@
         z-index: 0;
         overflow: hidden;
         pointer-events: none;
-        background: #0a0908;
+        background: #050505;
       }
       .ambient-bg::before,
       .ambient-bg::after {
@@ -63,18 +63,19 @@
         height: 60vw;
         border-radius: 9999px;
         filter: blur(120px);
-        opacity: 0.16;
+        opacity: 0.14;
       }
       .ambient-bg::before {
         top: -15vw;
         left: -10vw;
-        background: radial-gradient(circle, #c9a86a 0%, transparent 70%);
+        background: radial-gradient(circle, #6b6b6b 0%, transparent 70%);
         animation: drift1 28s ease-in-out infinite alternate;
       }
       .ambient-bg::after {
         bottom: -20vw;
         right: -15vw;
-        background: radial-gradient(circle, #7a5230 0%, transparent 70%);
+        background: radial-gradient(circle, #c9a86a 0%, transparent 70%);
+        opacity: 0.07;
         animation: drift2 34s ease-in-out infinite alternate;
       }
       @keyframes drift1 {

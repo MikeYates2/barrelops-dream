@@ -83,14 +83,11 @@ function shell(contentNode) {
     { class: "w-64 shrink-0 glass border-r border-white/10 flex flex-col h-screen sticky top-0 z-20" },
     [
       el("div", { class: "px-5 py-6 border-b border-white/10 flex items-center gap-3" }, [
-        el(
-          "div",
-          {
-            class:
-              "w-10 h-10 rounded-full bg-gradient-to-br from-gold-light to-gold-dark flex items-center justify-center font-serif text-noir text-lg shadow-[0_0_20px_rgba(201,168,106,0.35)]",
-          },
-          "D"
-        ),
+        el("img", {
+          src: "/src/assets/dream-spirits-logo.png",
+          alt: "Dream Spirits",
+          class: "w-12 h-12 rounded-lg object-contain shrink-0",
+        }),
         el("div", {}, [
           el("div", { class: "font-serif text-xl text-ivory leading-tight tracking-wide" }, "Dream Spirits"),
           el("div", { class: "text-[10px] text-gold/70 tracking-[0.2em] uppercase" }, "Barrel Pick Ops"),
