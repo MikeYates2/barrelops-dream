@@ -51,6 +51,7 @@ function seedState() {
     currentCustomerEmail: null,
     barrels: seedBarrels(),
     picks: [],
+    membershipRequests: [],
   };
 }
 
@@ -60,6 +61,7 @@ function load() {
     if (!raw) return seedState();
     const parsed = JSON.parse(raw);
     if (!parsed.barrels || !parsed.picks) return seedState();
+    if (!parsed.membershipRequests) parsed.membershipRequests = [];
     return parsed;
   } catch (e) {
     console.warn("Failed to load state, reseeding", e);
@@ -237,6 +239,23 @@ export function markListingComplete(id) {
 export function picksForCustomer(email) {
   if (!email) return [];
   return state.picks.filter((p) => p.contact.email.toLowerCase() === email.toLowerCase());
+}
+
+// ---- Membership CTA capture (demo — stored locally, visible to staff) ----
+
+// Deliberately calls persist(), not notify(): the membership panel swaps to
+// a confirmation state entirely with its own local redraw. Broadcasting to
+// the global re-render subscriber would remount the whole Marketplace page
+// (main.js re-renders the current route on every store change) and wipe
+// that local "submitted" flag before the user ever sees the confirmation.
+export function requestMembership({ name, email }) {
+  state.membershipRequests.push({
+    id: uid("mbr"),
+    name,
+    email,
+    requestedAt: new Date().toISOString(),
+  });
+  persist();
 }
 
 export { PHASES, uid };

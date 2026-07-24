@@ -33,17 +33,17 @@ export function renderCalendar({ selected, onToggle, minDate }) {
     const header = el("div", { class: "flex items-center justify-between mb-3" }, [
       el("button", {
         type: "button",
-        class: "w-8 h-8 rounded-lg hover:bg-stone-100 text-stone-500",
+        class: "w-8 h-8 rounded-lg hover:bg-white/[0.06] text-ivory/50 hover:text-gold-light transition-colors",
         textContent: "‹",
         onclick: () => {
           viewDate = new Date(year, month - 1, 1);
           draw();
         },
       }),
-      el("span", { class: "font-semibold text-stone-800 text-sm" }, monthLabel),
+      el("span", { class: "font-serif text-lg text-ivory tracking-wide" }, monthLabel),
       el("button", {
         type: "button",
-        class: "w-8 h-8 rounded-lg hover:bg-stone-100 text-stone-500",
+        class: "w-8 h-8 rounded-lg hover:bg-white/[0.06] text-ivory/50 hover:text-gold-light transition-colors",
         textContent: "›",
         onclick: () => {
           viewDate = new Date(year, month + 1, 1);
@@ -52,7 +52,9 @@ export function renderCalendar({ selected, onToggle, minDate }) {
       }),
     ]);
 
-    const dow = ["S", "M", "T", "W", "T", "F", "S"].map((d) => el("div", { class: "text-[11px] text-stone-400 text-center py-1 font-medium" }, d));
+    const dow = ["S", "M", "T", "W", "T", "F", "S"].map((d) =>
+      el("div", { class: "text-[10px] text-ivory/30 text-center py-1 font-medium tracking-widest" }, d)
+    );
 
     const cells = [];
     for (let i = 0; i < startOffset; i++) cells.push(el("div", {}));
@@ -69,10 +71,10 @@ export function renderCalendar({ selected, onToggle, minDate }) {
             disabled: isPast,
             class: `w-9 h-9 rounded-lg text-sm flex items-center justify-center transition-colors ${
               isPast
-                ? "text-stone-300 cursor-not-allowed"
+                ? "text-ivory/15 cursor-not-allowed"
                 : isSelected
-                ? "bg-amber-700 text-white font-semibold"
-                : "text-stone-700 hover:bg-amber-50"
+                ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir font-semibold shadow-[0_0_12px_rgba(201,168,106,0.4)]"
+                : "text-ivory/70 hover:bg-gold/10 hover:text-gold-light"
             }`,
             onclick: () => {
               if (isPast) return;

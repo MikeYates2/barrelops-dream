@@ -59,11 +59,12 @@ export function renderInventoryUpload() {
   let csvText = "";
   let preview = { rows: [], errors: [] };
 
-  const wrap = el("div", { class: "p-8 max-w-3xl mx-auto" });
+  const wrap = el("div", { class: "px-8 py-16 max-w-3xl mx-auto" });
 
   function draw() {
     const textarea = el("textarea", {
-      class: "w-full h-48 rounded-lg border border-stone-300 px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-600/40",
+      class:
+        "w-full h-48 rounded-lg bg-white/[0.04] border border-white/15 px-3.5 py-3 text-xs font-mono text-ivory placeholder:text-ivory/25 focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/50",
       placeholder: SAMPLE_CSV,
       value: csvText,
       oninput: (e) => {
@@ -74,7 +75,8 @@ export function renderInventoryUpload() {
     const fileInput = el("input", {
       type: "file",
       accept: ".csv,text/csv",
-      class: "text-sm",
+      class:
+        "text-sm text-ivory/60 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-gold/15 file:text-gold-light file:text-xs file:font-medium hover:file:bg-gold/25 file:cursor-pointer cursor-pointer",
       onchange: (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -92,16 +94,16 @@ export function renderInventoryUpload() {
       preview.rows.length || preview.errors.length
         ? card(
             [
-              el("div", { class: "p-4" }, [
+              el("div", { class: "p-5" }, [
                 preview.errors.length
                   ? el(
                       "div",
-                      { class: "text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3" },
+                      { class: "text-sm text-red-300 bg-red-500/10 border border-red-400/25 rounded-lg px-4 py-2.5 mb-3" },
                       preview.errors.map((e) => el("div", {}, e))
                     )
                   : null,
                 preview.rows.length
-                  ? el("div", { class: "text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2" }, `${preview.rows.length} barrel(s) ready to import.`)
+                  ? el("div", { class: "text-sm text-emerald-300 bg-emerald-500/10 border border-emerald-400/25 rounded-lg px-4 py-2.5" }, `${preview.rows.length} barrel(s) ready to import.`)
                   : null,
               ]),
             ],
@@ -111,16 +113,16 @@ export function renderInventoryUpload() {
 
     const form = card(
       [
-        el("div", { class: "p-6 space-y-4" }, [
+        el("div", { class: "p-8 space-y-5" }, [
           el("div", {}, [
-            el("span", { class: "block text-sm font-medium text-stone-700 mb-1" }, "Upload a CSV file"),
+            el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Upload a CSV file"),
             fileInput,
           ]),
-          el("div", { class: "text-xs text-stone-400" }, "— or paste CSV below —"),
+          el("div", { class: "text-xs text-ivory/30" }, "— or paste CSV below —"),
           el("div", {}, [
             el(
               "span",
-              { class: "block text-sm font-medium text-stone-700 mb-1" },
+              { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" },
               "CSV data (columns: whiskeyType, ageYears, distiller, warehouser, mashBill, numBarrels, pricePerBarrel, samplesAvailable)"
             ),
             textarea,
@@ -149,10 +151,12 @@ export function renderInventoryUpload() {
     );
 
     wrap.replaceChildren(
-      el("h1", { class: "text-2xl font-bold text-stone-900 mb-1" }, "Upload Inventory"),
-      el("p", { class: "text-sm text-stone-500 mb-6" }, "Bulk-add barrels from a CSV export of your inventory."),
-      form,
-      previewCard
+      el("h1", { class: "font-serif text-4xl text-ivory mb-1" }, "Upload Inventory"),
+      el("p", { class: "text-sm text-ivory/40 mb-8" }, "Bulk-add barrels from a CSV export of your inventory."),
+      // Node.replaceChildren() stringifies a null arg to the literal text
+      // "null" (unlike our el() helper) — previewCard is null until the
+      // first Preview click, so it must be filtered out, not passed as-is.
+      ...[form, previewCard].filter(Boolean)
     );
   }
 

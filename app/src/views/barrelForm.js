@@ -14,7 +14,7 @@ export function renderBarrelForm() {
     samplesAvailable: "true",
   };
 
-  const errorBox = el("div", { class: "hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4" });
+  const errorBox = el("div", { class: "hidden text-sm text-red-300 bg-red-500/10 border border-red-400/25 rounded-lg px-4 py-2.5 mb-4" });
 
   function onSubmit(e) {
     e.preventDefault();
@@ -78,9 +78,9 @@ export function renderBarrelForm() {
     ]
   );
 
-  return el("div", { class: "p-8 max-w-2xl mx-auto" }, [
-    el("h1", { class: "text-2xl font-bold text-stone-900 mb-1" }, "Add Barrel"),
-    el("p", { class: "text-sm text-stone-500 mb-6" }, "Add a single barrel to the inventory manually."),
-    card([el("div", { class: "p-6" }, [errorBox, form])]),
+  return el("div", { class: "px-8 py-16 max-w-2xl mx-auto" }, [
+    el("h1", { class: "font-serif text-4xl text-ivory mb-1" }, "Add Barrel"),
+    el("p", { class: "text-sm text-ivory/40 mb-8" }, "Add a single barrel to the inventory manually."),
+    card([el("div", { class: "p-8" }, [errorBox, form])]),
   ]);
 }

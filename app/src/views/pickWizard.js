@@ -6,9 +6,9 @@ import { navigate } from "../router.js";
 export function renderPickWizard({ barrelId }) {
   const barrel = getBarrel(barrelId);
   if (!barrel) {
-    return el("div", { class: "p-8" }, [
-      el("p", { class: "text-stone-500" }, "That barrel could not be found."),
-      el("a", { href: "#/", class: "text-amber-700 underline text-sm" }, "Back to marketplace"),
+    return el("div", { class: "px-8 py-16 max-w-2xl mx-auto" }, [
+      el("p", { class: "text-ivory/50" }, "That barrel could not be found."),
+      el("a", { href: "#/", class: "text-gold underline text-sm" }, "Back to marketplace"),
     ]);
   }
 
@@ -25,9 +25,9 @@ export function renderPickWizard({ barrelId }) {
   // internal state agree even if the user never touches the dropdown.
   let method = "2A_ship_samples";
   const selectedDates = new Set();
-  const errorBox = el("div", { class: "hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4" });
+  const errorBox = el("div", { class: "hidden text-sm text-red-300 bg-red-500/10 border border-red-400/25 rounded-lg px-4 py-2.5 mb-4" });
 
-  const wrap = el("div", { class: "p-8 max-w-2xl mx-auto" });
+  const wrap = el("div", { class: "px-8 py-16 max-w-2xl mx-auto" });
 
   function showError(msg) {
     errorBox.textContent = msg;
@@ -38,7 +38,7 @@ export function renderPickWizard({ barrelId }) {
     const steps = ["Intake", "Pick Method"];
     return el(
       "div",
-      { class: "flex items-center gap-2 mb-6" },
+      { class: "flex items-center gap-2 mb-8" },
       steps.flatMap((label, i) => {
         const n = i + 1;
         const isActive = n === step;
@@ -46,24 +46,28 @@ export function renderPickWizard({ barrelId }) {
         const dot = el(
           "div",
           {
-            class: `w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-              isDone ? "bg-emerald-600 text-white" : isActive ? "bg-amber-800 text-white" : "bg-stone-200 text-stone-500"
+            class: `w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
+              isDone
+                ? "bg-emerald-500/80 text-noir"
+                : isActive
+                ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir shadow-[0_0_12px_rgba(201,168,106,0.4)]"
+                : "bg-white/[0.06] text-ivory/40 border border-white/10"
             }`,
           },
           isDone ? "✓" : String(n)
         );
-        const item = el("div", { class: "flex items-center gap-2" }, [dot, el("span", { class: "text-sm font-medium text-stone-600" }, label)]);
-        return i < steps.length - 1 ? [item, el("div", { class: "flex-1 h-px bg-stone-200" })] : [item];
+        const item = el("div", { class: "flex items-center gap-2" }, [dot, el("span", { class: "text-sm tracking-wide text-ivory/60" }, label)]);
+        return i < steps.length - 1 ? [item, el("div", { class: "flex-1 h-px bg-white/10" })] : [item];
       })
     );
   }
 
   function step1() {
     return card([
-      el("div", { class: "p-6" }, [
-        el("h2", { class: "text-lg font-semibold text-stone-900 mb-1" }, "Contact Information"),
-        el("p", { class: "text-sm text-stone-500 mb-5" }, "Tell us who this pick is for."),
-        el("div", { class: "grid grid-cols-2 gap-4" }, [
+      el("div", { class: "p-8" }, [
+        el("h2", { class: "font-serif text-2xl text-ivory mb-1" }, "Contact Information"),
+        el("p", { class: "text-sm text-ivory/40 mb-6" }, "Tell us who this pick is for."),
+        el("div", { class: "grid grid-cols-2 gap-5" }, [
           field("Full Name", textInput({ type: "text", value: contact.name, oninput: (e) => (contact.name = e.target.value) })),
           field("Email", textInput({ type: "email", value: contact.email, oninput: (e) => (contact.email = e.target.value) })),
           field("Phone", textInput({ type: "tel", value: contact.phone, oninput: (e) => (contact.phone = e.target.value) })),
@@ -83,7 +87,7 @@ export function renderPickWizard({ barrelId }) {
             null
           ),
         ]),
-        el("div", { class: "flex justify-end pt-6" }, [
+        el("div", { class: "flex justify-end pt-8" }, [
           button("Continue", {
             variant: "gold",
             onClick: () => {
@@ -109,9 +113,9 @@ export function renderPickWizard({ barrelId }) {
 
     const calendarBlock =
       method === "2B_in_person"
-        ? el("div", { class: "mt-5 pt-5 border-t border-stone-200" }, [
-            el("span", { class: "block text-sm font-medium text-stone-700 mb-2" }, "Select your preferred date(s)"),
-            el("p", { class: "text-xs text-stone-400 mb-3" }, "Pick up to 3 dates. Dream Spirits staff will confirm one."),
+        ? el("div", { class: "mt-6 pt-6 border-t border-white/10" }, [
+            el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Select your preferred date(s)"),
+            el("p", { class: "text-xs text-ivory/35 mb-4" }, "Pick up to 3 dates. Dream Spirits staff will confirm one."),
             renderCalendar({
               selected: selectedDates,
               onToggle: (iso) => {
@@ -123,9 +127,9 @@ export function renderPickWizard({ barrelId }) {
         : null;
 
     return card([
-      el("div", { class: "p-6" }, [
-        el("h2", { class: "text-lg font-semibold text-stone-900 mb-1" }, "Choose Pick Method"),
-        el("p", { class: "text-sm text-stone-500 mb-5" }, "How would you like to evaluate this barrel?"),
+      el("div", { class: "p-8" }, [
+        el("h2", { class: "font-serif text-2xl text-ivory mb-1" }, "Choose Pick Method"),
+        el("p", { class: "text-sm text-ivory/40 mb-6" }, "How would you like to evaluate this barrel?"),
         field(
           "Pick Method",
           selectInput(methodOptions, {
@@ -137,7 +141,7 @@ export function renderPickWizard({ barrelId }) {
           })
         ),
         calendarBlock,
-        el("div", { class: "flex justify-between pt-6" }, [
+        el("div", { class: "flex justify-between pt-8" }, [
           button("Back", { variant: "secondary", onClick: () => { step = 1; draw(); } }),
           button("Submit Pick Request", {
             variant: "gold",
@@ -165,12 +169,12 @@ export function renderPickWizard({ barrelId }) {
 
   function draw() {
     wrap.replaceChildren(
-      el("a", { href: "#/", class: "text-xs text-amber-700 hover:underline" }, "← Back to Marketplace"),
-      el("div", { class: "flex items-center gap-3 mt-2 mb-1" }, [
-        el("h1", { class: "text-2xl font-bold text-stone-900" }, "Start a Barrel Pick"),
+      el("a", { href: "#/", class: "text-xs text-gold/70 hover:text-gold transition-colors" }, "← Back to Marketplace"),
+      el("div", { class: "flex items-center gap-3 mt-3 mb-2" }, [
+        el("h1", { class: "font-serif text-4xl text-ivory" }, "Start a Barrel Pick"),
       ]),
-      el("div", { class: "flex items-center gap-2 text-sm text-stone-500 mb-6" }, [
-        badge(barrel.whiskeyType, "amber"),
+      el("div", { class: "flex items-center gap-2 text-sm text-ivory/40 mb-8" }, [
+        badge(barrel.whiskeyType, "gold"),
         `${barrel.distiller} · ${barrel.ageYears} yrs · ${barrel.mashBill}`,
       ]),
       stepper(),

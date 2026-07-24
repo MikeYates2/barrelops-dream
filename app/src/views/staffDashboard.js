@@ -5,7 +5,7 @@ export function renderStaffDashboard() {
   const state = getState();
   let phaseFilter = "all";
 
-  const wrap = el("div", { class: "p-8 max-w-6xl mx-auto" });
+  const wrap = el("div", { class: "px-8 py-16 max-w-6xl mx-auto" });
 
   function draw() {
     const picks = state.picks
@@ -14,16 +14,17 @@ export function renderStaffDashboard() {
       .filter((p) => (phaseFilter === "all" ? true : String(p.phase) === phaseFilter));
 
     const needsAttention = state.picks.filter((p) => p.pickMethod === "2B_in_person" && p.dateStatus === "pending");
+    const membershipRequests = state.membershipRequests || [];
 
     const filterBar = el(
       "div",
-      { class: "flex flex-wrap gap-2 mb-6" },
+      { class: "flex flex-wrap gap-2 mb-8" },
       [{ n: "all", label: "All" }, ...PHASES].map((p) =>
         el("button", {
-          class: `px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+          class: `px-3.5 py-1.5 rounded-full text-xs tracking-wide border transition-colors ${
             phaseFilter === String(p.n)
-              ? "bg-stone-900 text-white border-stone-900"
-              : "bg-white text-stone-600 border-stone-300 hover:bg-stone-50"
+              ? "bg-gold text-noir font-semibold border-gold"
+              : "bg-white/[0.03] text-ivory/50 border-white/10 hover:border-gold/30 hover:text-ivory"
           }`,
           textContent: p.label,
           onclick: () => {
@@ -37,71 +38,98 @@ export function renderStaffDashboard() {
     const attentionCard = needsAttention.length
       ? card(
           [
-            el("div", { class: "p-4" }, [
-              el("div", { class: "flex items-center gap-2 font-semibold text-amber-800 text-sm mb-2" }, [
+            el("div", { class: "p-5" }, [
+              el("div", { class: "flex items-center gap-2 font-medium text-gold-light text-sm mb-3" }, [
                 el("span", {}, "⏳"),
                 `${needsAttention.length} pick(s) waiting on date approval`,
               ]),
               el(
                 "div",
-                { class: "flex flex-wrap gap-2" },
+                { class: "flex flex-wrap gap-3" },
                 needsAttention.map((p) =>
                   el(
                     "a",
-                    { href: `#/pick/${p.id}`, class: "text-xs text-amber-700 underline" },
+                    { href: `#/pick/${p.id}`, class: "text-xs text-gold/80 hover:text-gold underline underline-offset-2" },
                     `${p.contact.name} — ${p.requestedDates.length} date(s) requested`
                   )
                 )
               ),
             ]),
           ],
-          "mb-6 border-amber-300 bg-amber-50/40"
+          "mb-4"
+        )
+      : null;
+
+    const membershipCard = membershipRequests.length
+      ? card(
+          [
+            el("div", { class: "p-5" }, [
+              el("div", { class: "flex items-center gap-2 font-medium text-ivory text-sm mb-3" }, [
+                el("span", { class: "text-gold" }, "✦"),
+                `${membershipRequests.length} membership request(s) from the Circle CTA`,
+              ]),
+              el(
+                "div",
+                { class: "flex flex-wrap gap-3" },
+                membershipRequests
+                  .slice()
+                  .reverse()
+                  .map((r) => el("span", { class: "text-xs text-ivory/50" }, `${r.name} <${r.email}> · ${fmtDate(r.requestedAt)}`))
+              ),
+            ]),
+          ],
+          "mb-8"
         )
       : null;
 
     const cols = ["Barrel", "Customer", "Type", "Method", "Phase", "Created", ""];
 
-    const table = card([
-      el("div", { class: "overflow-x-auto" }, [
-        el("table", { class: "w-full text-sm" }, [
-          el(
-            "thead",
-            {},
+    const table = card(
+      [
+        el("div", { class: "overflow-x-auto" }, [
+          el("table", { class: "w-full text-sm" }, [
             el(
-              "tr",
-              { class: "border-b border-stone-200 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wide" },
-              cols.map((c) => el("th", { class: "px-4 py-3 whitespace-nowrap" }, c))
-            )
-          ),
-          el(
-            "tbody",
-            {},
-            picks.length
-              ? picks.map((p) => {
-                  const barrel = getBarrel(p.barrelId);
-                  const phaseInfo = PHASES.find((ph) => ph.n === p.phase);
-                  return el("tr", { class: "border-b border-stone-100 hover:bg-stone-50" }, [
-                    el("td", { class: "px-4 py-3 font-medium text-stone-800 whitespace-nowrap" }, barrel ? `${barrel.whiskeyType} · ${barrel.ageYears}yrs` : "—"),
-                    el("td", { class: "px-4 py-3 text-stone-600 whitespace-nowrap" }, p.contact.name),
-                    el("td", { class: "px-4 py-3" }, badge(p.contact.groupType === "retailer" ? "Retailer" : "Private Group", "blue")),
-                    el("td", { class: "px-4 py-3 text-stone-500 whitespace-nowrap" }, p.pickMethod === "2B_in_person" ? "In-Person" : "Ship Samples"),
-                    el("td", { class: "px-4 py-3" }, badge(phaseInfo ? phaseInfo.label : "—", p.phase === 6 ? "green" : "amber")),
-                    el("td", { class: "px-4 py-3 text-stone-500 whitespace-nowrap" }, fmtDate(p.createdAt)),
-                    el("td", { class: "px-4 py-3 text-right" }, el("a", { href: `#/pick/${p.id}`, class: "text-xs text-amber-700 underline" }, "View")),
-                  ]);
-                })
-              : el("tr", {}, el("td", { class: "px-4 py-10 text-center text-stone-400", colSpan: cols.length }, "No picks in this stage."))
-          ),
+              "thead",
+              {},
+              el(
+                "tr",
+                { class: "border-b border-white/10 text-left text-[10px] font-semibold text-ivory/35 uppercase tracking-[0.15em]" },
+                cols.map((c) => el("th", { class: "px-4 py-3 whitespace-nowrap" }, c))
+              )
+            ),
+            el(
+              "tbody",
+              {},
+              picks.length
+                ? picks.map((p) => {
+                    const barrel = getBarrel(p.barrelId);
+                    const phaseInfo = PHASES.find((ph) => ph.n === p.phase);
+                    return el("tr", { class: "border-b border-white/5 hover:bg-white/[0.03]" }, [
+                      el("td", { class: "px-4 py-3 font-medium text-ivory whitespace-nowrap" }, barrel ? `${barrel.whiskeyType} · ${barrel.ageYears}yrs` : "—"),
+                      el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, p.contact.name),
+                      el("td", { class: "px-4 py-3" }, badge(p.contact.groupType === "retailer" ? "Retailer" : "Private Group", "blue")),
+                      el("td", { class: "px-4 py-3 text-ivory/50 whitespace-nowrap" }, p.pickMethod === "2B_in_person" ? "In-Person" : "Ship Samples"),
+                      el("td", { class: "px-4 py-3" }, badge(phaseInfo ? phaseInfo.label : "—", p.phase === 6 ? "green" : "amber")),
+                      el("td", { class: "px-4 py-3 text-ivory/40 whitespace-nowrap" }, fmtDate(p.createdAt)),
+                      el("td", { class: "px-4 py-3 text-right" }, el("a", { href: `#/pick/${p.id}`, class: "text-xs text-gold/80 hover:text-gold underline underline-offset-2" }, "View")),
+                    ]);
+                  })
+                : el("tr", {}, el("td", { class: "px-4 py-10 text-center text-ivory/30", colSpan: cols.length }, "No picks in this stage."))
+            ),
+          ]),
         ]),
-      ]),
-    ]);
+      ],
+      "",
+      { glare: false }
+    );
 
     wrap.replaceChildren(
-      el("h1", { class: "text-2xl font-bold text-stone-900 mb-1" }, "Dashboard"),
-      el("p", { class: "text-sm text-stone-500 mb-6" }, "All active barrel picks across every customer."),
-      attentionCard,
-      filterBar,
-      table
+      el("h1", { class: "font-serif text-4xl text-ivory mb-1" }, "Dashboard"),
+      el("p", { class: "text-sm text-ivory/40 mb-8" }, "All active barrel picks across every customer."),
+      // Node.replaceChildren() (unlike our el() helper) doesn't skip null
+      // args — it stringifies them to the literal text "null" — so filter
+      // out the panels that have nothing to show first.
+      ...[attentionCard, membershipCard, filterBar, table].filter(Boolean)
     );
   }
 
