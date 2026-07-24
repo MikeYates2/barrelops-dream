@@ -14,7 +14,7 @@ export function renderBarrelForm() {
     samplesAvailable: "true",
   };
 
-  const errorBox = el("div", { class: "hidden text-sm text-red-300 bg-red-500/10 border border-red-400/25 rounded-lg px-4 py-2.5 mb-4" });
+  const errorBox = el("div", { class: "hidden text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mb-4" });
 
   function onSubmit(e) {
     e.preventDefault();

@@ -22,9 +22,9 @@
                 100: "#0d0d0d",
               },
               gold: {
-                DEFAULT: "#c9a86a",
-                light: "#e4cd9a",
-                dark: "#9c7d45",
+                DEFAULT: "#f3ede0",
+                light: "#ffffff",
+                dark: "#cfc9ba",
               },
               ivory: "#f3ede0",
             },
@@ -74,8 +74,8 @@
       .ambient-bg::after {
         bottom: -20vw;
         right: -15vw;
-        background: radial-gradient(circle, #c9a86a 0%, transparent 70%);
-        opacity: 0.07;
+        background: radial-gradient(circle, #ffffff 0%, transparent 70%);
+        opacity: 0.06;
         animation: drift2 34s ease-in-out infinite alternate;
       }
       @keyframes drift1 {
@@ -102,7 +102,7 @@
         background: linear-gradient(155deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
         backdrop-filter: blur(28px) saturate(180%);
         -webkit-backdrop-filter: blur(28px) saturate(180%);
-        border: 1px solid rgba(201, 168, 106, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.22);
         box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
       }
       /* Pointer-tracked sheen — glass-glare elements set --mx/--my via JS on pointermove */
@@ -144,16 +144,16 @@
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: rgba(201, 168, 106, 0.25);
+        background: rgba(243, 237, 224, 0.25);
         border-radius: 999px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(201, 168, 106, 0.4);
+        background: rgba(243, 237, 224, 0.4);
       }
 
       ::selection {
-        background: rgba(201, 168, 106, 0.35);
-        color: #fff;
+        background: rgba(255, 255, 255, 0.3);
+        color: #050505;
       }
     </style>
   </head>

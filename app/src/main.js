@@ -20,7 +20,7 @@ function navLink(label, path, icon) {
       href: `#${path}`,
       class: `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm tracking-wide transition-all duration-300 ${
         active
-          ? "bg-gradient-to-r from-gold/20 to-transparent text-gold-light border border-gold/25 shadow-[0_0_20px_rgba(201,168,106,0.12)]"
+          ? "bg-gradient-to-r from-white/15 to-transparent text-gold-light border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
           : "text-ivory/50 hover:text-ivory hover:bg-white/[0.04] border border-transparent"
       }`,
     },

@@ -23,9 +23,9 @@ function phaseTracker(currentPhase) {
         {
           class: `w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
             isDone
-              ? "bg-emerald-500/80 text-noir"
+              ? "bg-ivory text-noir"
               : isActive
-              ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir shadow-[0_0_14px_rgba(201,168,106,0.4)]"
+              ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir shadow-[0_0_14px_rgba(255,255,255,0.35)]"
               : "bg-white/[0.06] text-ivory/35 border border-white/10"
           }`,
         },
@@ -36,7 +36,7 @@ function phaseTracker(currentPhase) {
         el("span", { class: `text-[11px] text-center tracking-wide ${isActive ? "text-ivory" : "text-ivory/35"}` }, p.label),
       ]);
       return i < PHASES.length - 1
-        ? [item, el("div", { class: `flex-1 h-px min-w-[16px] ${isDone ? "bg-emerald-500/50" : "bg-white/10"}` })]
+        ? [item, el("div", { class: `flex-1 h-px min-w-[16px] ${isDone ? "bg-ivory/50" : "bg-white/10"}` })]
         : [item];
     })
   );

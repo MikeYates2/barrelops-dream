@@ -52,14 +52,17 @@ export function fmtDate(d) {
 
 // ---- Luxury visual language: glass surfaces, gold accents, serif display type ----
 
+// Status is conveyed by fill weight and contrast, not hue, to stay within
+// the black/white/cream palette: red is deliberately the dimmest (muted,
+// inactive), green/gold are solid bright fills (positive, high-emphasis).
 export function badge(text, tone = "neutral") {
   const tones = {
     neutral: "bg-white/[0.06] text-ivory/70 border border-white/10",
-    green: "bg-emerald-400/10 text-emerald-300 border border-emerald-400/20",
-    red: "bg-red-400/10 text-red-300 border border-red-400/20",
-    amber: "bg-gold/10 text-gold-light border border-gold/25",
-    blue: "bg-sky-400/10 text-sky-300 border border-sky-400/20",
-    gold: "bg-gold/15 text-gold-light border border-gold/30",
+    green: "bg-ivory text-noir font-semibold border border-ivory",
+    red: "bg-transparent text-ivory/35 border border-white/15",
+    amber: "bg-white/10 text-ivory border border-white/20",
+    blue: "bg-transparent text-ivory/75 border border-white/25",
+    gold: "bg-gold-light text-noir font-semibold border border-transparent",
   };
   return el("span", {
     class: `inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium tracking-wide ${tones[tone] || tones.neutral}`,
@@ -102,10 +105,10 @@ export function card(children, extraClass = "", opts = {}) {
 export function button(label, opts = {}) {
   const { variant = "gold", onClick, type = "button", disabled = false, extraClass = "" } = opts;
   const variants = {
-    gold: "bg-gradient-to-b from-gold-light to-gold-dark text-noir font-semibold shadow-[0_4px_20px_rgba(201,168,106,0.35)] hover:shadow-[0_6px_28px_rgba(201,168,106,0.5)] hover:brightness-105",
-    secondary: "bg-white/[0.04] text-ivory border border-white/15 hover:border-gold/40 hover:bg-white/[0.07]",
+    gold: "bg-gradient-to-b from-gold-light to-gold-dark text-noir font-semibold shadow-[0_4px_20px_rgba(255,255,255,0.25)] hover:shadow-[0_6px_28px_rgba(255,255,255,0.4)] hover:brightness-105",
+    secondary: "bg-white/[0.04] text-ivory border border-white/15 hover:border-white/40 hover:bg-white/[0.07]",
     ghost: "text-ivory/60 hover:text-ivory hover:bg-white/[0.05]",
-    danger: "bg-red-500/15 text-red-300 border border-red-400/25 hover:bg-red-500/25",
+    danger: "bg-transparent text-ivory border-2 border-white/50 hover:bg-white/10 hover:border-white",
   };
   return el("button", {
     type,

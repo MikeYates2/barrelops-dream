@@ -25,7 +25,7 @@ export function renderPickWizard({ barrelId }) {
   // internal state agree even if the user never touches the dropdown.
   let method = "2A_ship_samples";
   const selectedDates = new Set();
-  const errorBox = el("div", { class: "hidden text-sm text-red-300 bg-red-500/10 border border-red-400/25 rounded-lg px-4 py-2.5 mb-4" });
+  const errorBox = el("div", { class: "hidden text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mb-4" });
 
   const wrap = el("div", { class: "px-8 py-16 max-w-2xl mx-auto" });
 
@@ -48,9 +48,9 @@ export function renderPickWizard({ barrelId }) {
           {
             class: `w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
               isDone
-                ? "bg-emerald-500/80 text-noir"
+                ? "bg-ivory text-noir"
                 : isActive
-                ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir shadow-[0_0_12px_rgba(201,168,106,0.4)]"
+                ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir shadow-[0_0_12px_rgba(255,255,255,0.35)]"
                 : "bg-white/[0.06] text-ivory/40 border border-white/10"
             }`,
           },

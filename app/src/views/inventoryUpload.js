@@ -98,12 +98,12 @@ export function renderInventoryUpload() {
                 preview.errors.length
                   ? el(
                       "div",
-                      { class: "text-sm text-red-300 bg-red-500/10 border border-red-400/25 rounded-lg px-4 py-2.5 mb-3" },
+                      { class: "text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mb-3" },
                       preview.errors.map((e) => el("div", {}, e))
                     )
                   : null,
                 preview.rows.length
-                  ? el("div", { class: "text-sm text-emerald-300 bg-emerald-500/10 border border-emerald-400/25 rounded-lg px-4 py-2.5" }, `${preview.rows.length} barrel(s) ready to import.`)
+                  ? el("div", { class: "text-sm text-noir bg-ivory font-medium rounded-lg px-4 py-2.5" }, `${preview.rows.length} barrel(s) ready to import.`)
                   : null,
               ]),
             ],

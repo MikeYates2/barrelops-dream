@@ -9,15 +9,17 @@ const STATUS_TONE = {
   sold: ["Reserved", "neutral"],
 };
 
+// Whiskey types are differentiated by tint and intensity of white/cream
+// overlay rather than hue, to stay within the black/white/cream palette.
 const TYPE_GRADIENT = {
-  "Bourbon Whiskey": "from-amber-700/50 via-amber-950/40 to-noir",
-  "Rye Whiskey": "from-orange-800/50 via-red-950/35 to-noir",
-  "Single Malt Whiskey": "from-yellow-700/40 via-stone-900/50 to-noir",
-  "Wheated Whiskey": "from-yellow-600/40 via-amber-950/40 to-noir",
+  "Bourbon Whiskey": "from-white/15 via-noir-50 to-noir",
+  "Rye Whiskey": "from-ivory/20 via-noir-50 to-noir",
+  "Single Malt Whiskey": "from-white/8 via-noir-100 to-noir",
+  "Wheated Whiskey": "from-ivory/12 via-noir-50 to-noir",
 };
 
 function typeGradient(type) {
-  return TYPE_GRADIENT[type] || "from-stone-700/40 via-stone-950/40 to-noir";
+  return TYPE_GRADIENT[type] || "from-white/10 via-noir-50 to-noir";
 }
 
 // In-page smooth scroll. Deliberately not an <a href="#id"> — our router
@@ -32,7 +34,23 @@ function heroSection() {
     "section",
     { class: "relative min-h-[78vh] flex flex-col items-center justify-center text-center px-8 overflow-hidden" },
     [
-      el("div", { class: "reveal flex flex-col items-center gap-6 max-w-5xl" }, [
+      // Background photo, desaturated so it stays within the black/white/cream
+      // system rather than reintroducing the warm wood tones and blue tags.
+      el("div", {
+        class: "absolute inset-0 z-0 bg-cover grayscale contrast-[1.05]",
+        style: "background-image: url('/src/assets/hero-warehouse.jpg'); background-position: center 25%;",
+      }),
+      // Dark scrim for text legibility. The bottom ramps to fully opaque well
+      // before the section edge (not just at the very last pixel) so the
+      // photo blends into the page's black background instead of hard-cutting
+      // at the section boundary.
+      el("div", {
+        class: "absolute inset-0 z-[1]",
+        style:
+          "background: linear-gradient(to bottom, rgba(5,5,5,0.88) 0%, rgba(5,5,5,0.42) 35%, rgba(5,5,5,0.5) 55%, rgba(5,5,5,0.96) 85%, rgba(5,5,5,1) 100%);",
+      }),
+      el("div", { class: "absolute inset-0 z-[1] bg-noir/20" }),
+      el("div", { class: "relative z-10 reveal flex flex-col items-center gap-6 max-w-5xl" }, [
         el("span", { class: "text-xs font-semibold tracking-[0.35em] text-gold uppercase" }, "Single Barrel · By Invitation"),
         el(
           "h1",
@@ -55,7 +73,7 @@ function heroSection() {
           }),
         ]),
       ]),
-      el("div", { class: "absolute bottom-8 left-1/2 -translate-x-1/2 text-gold/40 text-2xl animate-bounce" }, "⌄"),
+      el("div", { class: "absolute z-10 bottom-8 left-1/2 -translate-x-1/2 text-gold/40 text-2xl animate-bounce" }, "⌄"),
     ]
   );
 }
