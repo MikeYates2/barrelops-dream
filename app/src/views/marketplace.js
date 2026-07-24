@@ -32,12 +32,12 @@ function heroSection() {
     "section",
     { class: "relative min-h-[78vh] flex flex-col items-center justify-center text-center px-8 overflow-hidden" },
     [
-      el("div", { class: "reveal flex flex-col items-center gap-6 max-w-3xl" }, [
+      el("div", { class: "reveal flex flex-col items-center gap-6 max-w-5xl" }, [
         el("span", { class: "text-xs font-semibold tracking-[0.35em] text-gold uppercase" }, "Single Barrel · By Invitation"),
         el(
           "h1",
           { class: "font-serif text-6xl md:text-7xl leading-[1.05] text-ivory" },
-          ["Exceptional Barrels.", el("br"), el("span", { class: "italic text-gold-light" }, "Uncommon"), " Character."]
+          ["Exceptional Barrels.", el("br"), "Where ", el("span", { class: "italic text-gold-light" }, "whiskey dreams"), " come true."]
         ),
         el(
           "p",
