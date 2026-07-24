@@ -50,7 +50,7 @@ export function renderPickWizard({ barrelId }) {
               isDone
                 ? "bg-ivory text-noir"
                 : isActive
-                ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir shadow-[0_0_12px_rgba(255,255,255,0.35)]"
+                ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir shadow-[0_0_12px_rgba(201,168,106,0.4)]"
                 : "bg-white/[0.06] text-ivory/40 border border-white/10"
             }`,
           },

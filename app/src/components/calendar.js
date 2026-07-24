@@ -73,7 +73,7 @@ export function renderCalendar({ selected, onToggle, minDate }) {
               isPast
                 ? "text-ivory/15 cursor-not-allowed"
                 : isSelected
-                ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir font-semibold shadow-[0_0_12px_rgba(255,255,255,0.35)]"
+                ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir font-semibold shadow-[0_0_12px_rgba(201,168,106,0.4)]"
                 : "text-ivory/70 hover:bg-gold/10 hover:text-gold-light"
             }`,
             onclick: () => {

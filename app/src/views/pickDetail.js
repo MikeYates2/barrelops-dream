@@ -25,7 +25,7 @@ function phaseTracker(currentPhase) {
             isDone
               ? "bg-ivory text-noir"
               : isActive
-              ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir shadow-[0_0_14px_rgba(255,255,255,0.35)]"
+              ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir shadow-[0_0_14px_rgba(201,168,106,0.4)]"
               : "bg-white/[0.06] text-ivory/35 border border-white/10"
           }`,
         },
