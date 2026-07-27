@@ -47,8 +47,10 @@ function seedBarrels() {
 
 function seedState() {
   return {
-    currentRole: "customer", // 'staff' | 'customer'
+    currentRole: null, // 'staff' | 'customer' | null (logged out)
     currentCustomerEmail: null,
+    customerName: null,
+    staffName: null,
     barrels: seedBarrels(),
     picks: [],
     membershipRequests: [],
@@ -62,6 +64,8 @@ function load() {
     const parsed = JSON.parse(raw);
     if (!parsed.barrels || !parsed.picks) return seedState();
     if (!parsed.membershipRequests) parsed.membershipRequests = [];
+    if (parsed.customerName === undefined) parsed.customerName = null;
+    if (parsed.staffName === undefined) parsed.staffName = null;
     return parsed;
   } catch (e) {
     console.warn("Failed to load state, reseeding", e);
@@ -95,10 +99,37 @@ export function resetDemoData() {
   notify();
 }
 
-// ---- Role / session ----
+// ---- Auth / session ----
+//
+// This is a client-side-only demo gate, not real security — anyone reading
+// the source (or this file) can see STAFF_ACCESS_CODE. It's here to stop
+// customers from casually landing on the staff dashboard, not to withstand
+// a determined attacker. Real staff auth needs a backend.
+const STAFF_ACCESS_CODE = "DREAMSTAFF";
 
-export function setRole(role) {
-  state.currentRole = role;
+export function loginAsCustomer({ name, email }) {
+  state.currentRole = "customer";
+  state.customerName = name;
+  state.currentCustomerEmail = email;
+  notify();
+  return { ok: true };
+}
+
+export function loginAsStaff({ name, accessCode }) {
+  if ((accessCode || "").trim().toUpperCase() !== STAFF_ACCESS_CODE) {
+    return { ok: false, error: "Incorrect access code." };
+  }
+  state.currentRole = "staff";
+  state.staffName = name;
+  notify();
+  return { ok: true };
+}
+
+export function logout() {
+  state.currentRole = null;
+  state.staffName = null;
+  state.customerName = null;
+  state.currentCustomerEmail = null;
   notify();
 }
 

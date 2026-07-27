@@ -4,7 +4,7 @@
     {
       "name": "barrel-pick-ops",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "5173", "--directory", "app"],
+      "runtimeArgs": ["app/serve.py", "5173"],
       "port": 5173
     }
   ]

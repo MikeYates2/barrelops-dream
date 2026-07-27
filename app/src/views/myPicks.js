@@ -12,7 +12,7 @@ export function renderMyPicks() {
         el(
           "div",
           { class: "p-6 text-sm text-ivory/45" },
-          "Enter your email in the sidebar under “Viewing as” to see your barrel picks, or start a new pick from the Marketplace."
+          "We couldn't find an email on your account. Try logging out and back in, or start a new pick from the Marketplace."
         ),
       ]),
     ]);

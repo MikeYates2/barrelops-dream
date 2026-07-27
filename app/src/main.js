@@ -1,7 +1,8 @@
-import { getState, subscribe, setRole, setCustomerEmail } from "./store.js";
+import { getState, subscribe, logout } from "./store.js";
 import { el, mount, button, initScrollReveal } from "./ui.js";
 import { route, notFoundRoute, startRouter, navigate, currentRoutePath } from "./router.js";
 
+import { renderLogin } from "./views/login.js";
 import { renderMarketplace } from "./views/marketplace.js";
 import { renderBarrelForm } from "./views/barrelForm.js";
 import { renderInventoryUpload } from "./views/inventoryUpload.js";
@@ -28,41 +29,23 @@ function navLink(label, path, icon) {
   );
 }
 
-function roleSwitcher() {
+// Shows who's signed in and lets them sign out. Replaces the old open
+// role-switcher — role is now set by logging in, not toggled at will.
+function sessionFooter() {
   const state = getState();
+  const isStaff = state.currentRole === "staff";
+  const name = isStaff ? state.staffName : state.customerName;
   return el("div", { class: "px-4 py-5 border-t border-white/10" }, [
-    el("div", { class: "text-[10px] font-semibold text-ivory/30 uppercase tracking-[0.2em] mb-3" }, "Viewing as"),
-    el("div", { class: "flex gap-2" }, [
-      button("Customer", {
-        variant: state.currentRole === "customer" ? "gold" : "secondary",
-        extraClass: "flex-1 !py-1.5 !px-2 text-xs",
-        onClick: () => {
-          setRole("customer");
-          navigate("/");
-        },
-      }),
-      button("Dream Staff", {
-        variant: state.currentRole === "staff" ? "gold" : "secondary",
-        extraClass: "flex-1 !py-1.5 !px-2 text-xs",
-        onClick: () => {
-          setRole("staff");
-          navigate("/dashboard");
-        },
-      }),
-    ]),
-    state.currentRole === "customer"
-      ? el("div", { class: "mt-4" }, [
-          el("label", { class: "block text-[10px] text-ivory/30 uppercase tracking-widest mb-1.5" }, "Your email (demo login)"),
-          el("input", {
-            type: "email",
-            placeholder: "you@example.com",
-            value: state.currentCustomerEmail || "",
-            class:
-              "w-full rounded-lg bg-white/[0.04] border border-white/15 px-2.5 py-1.5 text-xs text-ivory placeholder:text-ivory/25 focus:outline-none focus:ring-1 focus:ring-gold/50",
-            onchange: (e) => setCustomerEmail(e.target.value.trim()),
-          }),
-        ])
-      : null,
+    el("div", { class: "text-[10px] font-semibold text-ivory/30 uppercase tracking-[0.2em] mb-1.5" }, isStaff ? "Dream Staff" : "Customer"),
+    el("div", { class: "text-sm text-ivory truncate mb-3" }, name || ""),
+    button("Log Out", {
+      variant: "secondary",
+      extraClass: "w-full !py-1.5 text-xs",
+      onClick: () => {
+        logout();
+        navigate("/login");
+      },
+    }),
   ]);
 }
 
@@ -98,7 +81,7 @@ function shell(contentNode) {
         ...staffLinks,
         ...customerLinks,
       ]),
-      roleSwitcher(),
+      sessionFooter(),
     ]
   );
 
@@ -107,6 +90,15 @@ function shell(contentNode) {
 
 let lastScrolledPath = null;
 
+function scrollTopOnce() {
+  const path = currentRoutePath();
+  if (path !== lastScrolledPath) {
+    window.scrollTo({ top: 0 });
+    lastScrolledPath = path;
+  }
+}
+
+// Authenticated app pages: sidebar + content.
 function draw(contentNode) {
   mount(appRoot, shell(contentNode));
   // Only jump to top on an actual route change. Store mutations (approving a
@@ -114,26 +106,73 @@ function draw(contentNode) {
   // flow through this same draw() via the global subscribe-and-rerender
   // below, and on a long page that would yank the viewport away from
   // whatever the user just clicked.
-  const path = currentRoutePath();
-  if (path !== lastScrolledPath) {
-    window.scrollTo({ top: 0 });
-    lastScrolledPath = path;
-  }
+  scrollTopOnce();
   requestAnimationFrame(() => initScrollReveal(appRoot));
 }
 
-route("/", () => draw(renderMarketplace()));
-route("/inventory/new", () => draw(renderBarrelForm()));
-route("/inventory/upload", () => draw(renderInventoryUpload()));
-route("/pick/new/:barrelId", (params) => draw(renderPickWizard(params)));
-route("/pick/:id", (params) => draw(renderPickDetail(params)));
-route("/my-picks", () => draw(renderMyPicks()));
-route("/dashboard", () => draw(renderStaffDashboard()));
-notFoundRoute(() =>
-  draw(
-    el("div", { class: "p-10 text-ivory/50" }, "Page not found. ", el("a", { href: "#/", class: "text-gold underline" }, "Go home"))
-  )
-);
+// The login screen: full-bleed, no sidebar (there's nothing to navigate to yet).
+function drawBare(contentNode) {
+  mount(appRoot, contentNode);
+  scrollTopOnce();
+}
+
+// Gates a route to the given role(s). Not logged in -> /login. Logged in as
+// the wrong role -> onUnauthorized(). This is a client-side redirect only —
+// see the note on STAFF_ACCESS_CODE in store.js — but it does mean a
+// customer session can never render the staff views, even via a direct or
+// bookmarked URL.
+function requireRole(allowedRoles, onUnauthorized) {
+  const role = getState().currentRole;
+  if (role == null) {
+    navigate("/login");
+    return false;
+  }
+  if (!allowedRoles.includes(role)) {
+    onUnauthorized();
+    return false;
+  }
+  return true;
+}
+
+route("/login", () => {
+  const role = getState().currentRole;
+  if (role === "staff") return navigate("/dashboard");
+  if (role === "customer") return navigate("/");
+  drawBare(renderLogin());
+});
+
+route("/", () => {
+  if (!requireRole(["customer", "staff"], () => {})) return;
+  draw(renderMarketplace());
+});
+route("/inventory/new", () => {
+  if (!requireRole(["staff"], () => navigate("/"))) return;
+  draw(renderBarrelForm());
+});
+route("/inventory/upload", () => {
+  if (!requireRole(["staff"], () => navigate("/"))) return;
+  draw(renderInventoryUpload());
+});
+route("/pick/new/:barrelId", (params) => {
+  if (!requireRole(["customer"], () => navigate("/dashboard"))) return;
+  draw(renderPickWizard(params));
+});
+route("/pick/:id", (params) => {
+  if (!requireRole(["customer", "staff"], () => {})) return;
+  draw(renderPickDetail(params));
+});
+route("/my-picks", () => {
+  if (!requireRole(["customer"], () => navigate("/dashboard"))) return;
+  draw(renderMyPicks());
+});
+route("/dashboard", () => {
+  if (!requireRole(["staff"], () => navigate("/"))) return;
+  draw(renderStaffDashboard());
+});
+notFoundRoute(() => {
+  if (getState().currentRole == null) return navigate("/login");
+  draw(el("div", { class: "p-10 text-ivory/50" }, "Page not found. ", el("a", { href: "#/", class: "text-gold underline" }, "Go home")));
+});
 
 subscribe(() => {
   // Full re-render on any state change keeps this simple at our scale.

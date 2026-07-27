@@ -15,7 +15,7 @@ export function renderPickWizard({ barrelId }) {
   const state = getState();
   let step = 1;
   const contact = {
-    name: "",
+    name: state.customerName || "",
     email: state.currentCustomerEmail || "",
     phone: "",
     location: "",
