@@ -36,7 +36,7 @@ export function renderMyPicks() {
               card([
                 el("div", { class: "p-5 flex items-center justify-between" }, [
                   el("div", {}, [
-                    el("div", { class: "font-serif text-lg text-ivory" }, barrel ? `${barrel.whiskeyType} · ${barrel.ageYears} yrs` : "Barrel unavailable"),
+                    el("div", { class: "font-serif text-lg text-ivory" }, barrel ? barrel.sku : "Barrel unavailable"),
                     el("div", { class: "text-xs text-ivory/35" }, `Started ${fmtDate(p.createdAt)}`),
                   ]),
                   el("div", { class: "flex items-center gap-2" }, [

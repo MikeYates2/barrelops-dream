@@ -1,5 +1,5 @@
 import { getBarrel, createPick, setPickMethod, requestDates, getState, setCustomerEmail } from "../store.js";
-import { el, card, button, field, textInput, selectInput, badge } from "../ui.js";
+import { el, card, button, field, textInput, selectInput } from "../ui.js";
 import { renderCalendar } from "../components/calendar.js";
 import { navigate } from "../router.js";
 
@@ -173,9 +173,9 @@ export function renderPickWizard({ barrelId }) {
       el("div", { class: "flex items-center gap-3 mt-3 mb-2" }, [
         el("h1", { class: "font-serif text-4xl text-ivory" }, "Start a Barrel Pick"),
       ]),
-      el("div", { class: "flex items-center gap-2 text-sm text-ivory/40 mb-8" }, [
-        badge(barrel.whiskeyType, "gold"),
-        `${barrel.distiller} · ${barrel.ageYears} yrs · ${barrel.mashBill}`,
+      el("div", { class: "text-sm text-ivory/40 mb-8" }, [
+        el("span", { class: "text-ivory/70 font-medium" }, barrel.sku),
+        barrel.distilledWhen ? ` · Distilled ${barrel.distilledWhen}` : "",
       ]),
       stepper(),
       errorBox,

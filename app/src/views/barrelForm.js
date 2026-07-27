@@ -4,36 +4,30 @@ import { navigate } from "../router.js";
 
 export function renderBarrelForm() {
   const values = {
-    whiskeyType: "Bourbon Whiskey",
-    ageYears: "",
-    distiller: "",
-    warehouser: "",
-    mashBill: "",
-    numBarrels: "",
-    pricePerBarrel: "",
-    samplesAvailable: "true",
+    sku: "",
+    distilledWhen: "",
+    retailMsrp: "",
+    privateGroupPricing: "",
+    notes: "",
+    status: "available",
   };
 
   const errorBox = el("div", { class: "hidden text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mb-4" });
 
   function onSubmit(e) {
     e.preventDefault();
-    const required = ["whiskeyType", "ageYears", "distiller", "warehouser", "mashBill", "numBarrels", "pricePerBarrel"];
-    const missing = required.filter((k) => !String(values[k]).trim());
-    if (missing.length) {
-      errorBox.textContent = "Please fill in all required fields before adding this barrel.";
+    if (!values.sku.trim()) {
+      errorBox.textContent = "Please enter a SKU before adding this barrel.";
       errorBox.classList.remove("hidden");
       return;
     }
     addBarrel({
-      whiskeyType: values.whiskeyType,
-      ageYears: Number(values.ageYears),
-      distiller: values.distiller,
-      warehouser: values.warehouser,
-      mashBill: values.mashBill,
-      numBarrels: Number(values.numBarrels),
-      pricePerBarrel: Number(values.pricePerBarrel),
-      samplesAvailable: values.samplesAvailable === "true",
+      sku: values.sku.trim(),
+      distilledWhen: values.distilledWhen.trim(),
+      retailMsrp: values.retailMsrp.trim() === "" ? null : Number(values.retailMsrp),
+      privateGroupPricing: values.privateGroupPricing.trim() === "" ? null : Number(values.privateGroupPricing),
+      notes: values.notes.trim(),
+      status: values.status,
     });
     navigate("/");
   }
@@ -43,34 +37,32 @@ export function renderBarrelForm() {
     { class: "grid grid-cols-2 gap-4", onsubmit: onSubmit },
     [
       field(
-        "Whiskey Type",
-        selectInput(
-          [
-            { value: "Bourbon Whiskey", label: "Bourbon Whiskey" },
-            { value: "Rye Whiskey", label: "Rye Whiskey" },
-            { value: "Single Malt Whiskey", label: "Single Malt Whiskey" },
-            { value: "Wheated Whiskey", label: "Wheated Whiskey" },
-            { value: "Other", label: "Other" },
-          ],
-          { value: values.whiskeyType, onchange: (e) => (values.whiskeyType = e.target.value) }
-        )
+        "SKU",
+        textInput({ type: "text", placeholder: "e.g. Bardstown Bourbon Company Bourbon", oninput: (e) => (values.sku = e.target.value) }),
+        null
       ),
-      field("Age (Years)", textInput({ type: "number", step: "0.1", min: "0", oninput: (e) => (values.ageYears = e.target.value) })),
-      field("Distiller", textInput({ type: "text", placeholder: "e.g. MGPI of Indiana", oninput: (e) => (values.distiller = e.target.value) })),
-      field("Warehouser", textInput({ type: "text", placeholder: "e.g. MGPI - Lawrenceburg", oninput: (e) => (values.warehouser = e.target.value) })),
-      field("Mash Bill (C/R/W/M)", textInput({ type: "text", placeholder: "e.g. 60/36/4", oninput: (e) => (values.mashBill = e.target.value) })),
-      field("# of Barrels", textInput({ type: "number", min: "1", oninput: (e) => (values.numBarrels = e.target.value) })),
-      field("Price / Barrel", textInput({ type: "number", min: "0", placeholder: "e.g. 2200", oninput: (e) => (values.pricePerBarrel = e.target.value) })),
+      field("Distilled When", textInput({ type: "text", placeholder: "e.g. Dec 2018", oninput: (e) => (values.distilledWhen = e.target.value) })),
       field(
-        "Samples Available",
+        "Retail MSRP ($/bottle)",
+        textInput({ type: "number", step: "0.01", min: "0", placeholder: "e.g. 89.99", oninput: (e) => (values.retailMsrp = e.target.value) }),
+        "Leave blank if not available for retail."
+      ),
+      field(
+        "Private Group Pricing ($/bottle)",
+        textInput({ type: "number", step: "0.01", min: "0", placeholder: "e.g. 71.00", oninput: (e) => (values.privateGroupPricing = e.target.value) }),
+        "Leave blank if not available for private groups."
+      ),
+      field(
+        "Status",
         selectInput(
           [
-            { value: "true", label: "Available" },
-            { value: "false", label: "Not Available" },
+            { value: "available", label: "Available" },
+            { value: "not_available", label: "Not Available" },
           ],
-          { value: values.samplesAvailable, onchange: (e) => (values.samplesAvailable = e.target.value) }
+          { value: values.status, onchange: (e) => (values.status = e.target.value) }
         )
       ),
+      el("div", { class: "col-span-2" }, field("Notes", textInput({ type: "text", placeholder: "Optional — restrictions, condition, etc.", oninput: (e) => (values.notes = e.target.value) }))),
       el("div", { class: "col-span-2 flex gap-3 pt-2" }, [
         button("Add Barrel", { type: "submit", variant: "gold" }),
         button("Cancel", { variant: "secondary", onClick: () => navigate("/") }),

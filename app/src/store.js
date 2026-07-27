@@ -15,34 +15,65 @@ function uid(prefix) {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// Seeded from the real Dream Spirits master price list. Pricing here is
+// per bottle (retail MSRP and private-group price), not per barrel — each
+// row is a single barrel's SKU, matching the CSV upload template below.
 function seedBarrels() {
   const rows = [
-    ["Rye Whiskey", 10.3, "MGPI of Indiana", "MGPI - Lawrenceburg", "0/95/5", 100, 1957, true],
-    ["Rye Whiskey", 10.3, "MGPI of Indiana", "MGPI - Lawrenceburg", "0/95/5", 100, 1957, true],
-    ["Rye Whiskey", 10.6, "MGPI of Indiana", "MGPI - Lawrenceburg", "0/95/5", 100, 1983, true],
-    ["Bourbon Whiskey", 7.5, "Green River", "Green River - Owensboro", "70/21/9", 14, 1250, false],
-    ["Bourbon Whiskey", 11.9, "MGPI of Indiana", "MGPI - Lawrenceburg", "60/36/4", 25, 2987, true],
-    ["Bourbon Whiskey", 11.9, "MGPI of Indiana", "MGPI - Lawrenceburg", "60/36/4", 13, 2936, true],
-    ["Rye Whiskey", 9.7, "MGPI of Indiana", "Eight Settlers", "0/95/5", 14, 2009, false],
-    ["Bourbon Whiskey", 8.7, "MGPI of Indiana", "Eight Settlers", "60/36/4", 12, 2163, false],
-    ["Single Malt Whiskey", 4.2, "Restless Spirits Distilling", "Restless Spirits", "0/0/100", 1, 3348, true],
-    ["Single Malt Whiskey", 4.5, "Restless Spirits Distilling", "Restless Spirits", "0/0/100", 2, 3348, true],
+    { sku: "Bardstown Bourbon Company Bourbon", distilledWhen: "Dec 2018", retailMsrp: 89.99, privateGroupPricing: 71.0, notes: "", status: "available" },
+    { sku: "Bardstown Bourbon Co Wheated Bourbon", distilledWhen: "Oct 2017", retailMsrp: 109.99, privateGroupPricing: 91.0, notes: "", status: "available" },
+    { sku: "Barton 19 year bourbon", distilledWhen: "Apr 2007", retailMsrp: null, privateGroupPricing: 599.0, notes: "Not available for retailers or restaurants. Private Group or 1 West Dupont ONLY.", status: "available" },
+    { sku: "Barton 19 year old bourbon, HAZMAT super short barrels", distilledWhen: "Spring 2007", retailMsrp: null, privateGroupPricing: 599.0, notes: "Not available for retailers or restaurants. Private Group or 1 West Dupont ONLY.", status: "available" },
+    { sku: "Barton 10 year bourbon", distilledWhen: "Jun 2016", retailMsrp: 109.99, privateGroupPricing: 91.0, notes: "", status: "available" },
+    { sku: "Barton 12 year old HAZMAT", distilledWhen: "May 2014", retailMsrp: null, privateGroupPricing: null, notes: "These are hazmat and reserved for 1 West Dupont ONLY.", status: "not_available" },
+    { sku: "Bookers Bourbon mashbill from Jim Beam", distilledWhen: "Sep 2014", retailMsrp: 129.99, privateGroupPricing: 111.0, notes: "", status: "available" },
+    { sku: "Bookers Bourbon mashbill from Jim Beam DO Kelvin", distilledWhen: "Sep 2014", retailMsrp: 139.99, privateGroupPricing: 121.0, notes: "", status: "available" },
+    { sku: "Cascade Hollow (Dickel) Bourbon", distilledWhen: "Jun 2005", retailMsrp: 199.99, privateGroupPricing: 171.0, notes: "", status: "available" },
+    { sku: "Buff Trace Mashbill 2", distilledWhen: "Apr 2015", retailMsrp: 179.99, privateGroupPricing: 151.0, notes: "NOT AVAILABLE UNLESS you have done 6+ barrels with Dream Spirits. 1 per 6", status: "available" },
+    { sku: "Buff Trace Mashbill 2 Double Oaked in New Kelvin", distilledWhen: "2015", retailMsrp: 199.99, privateGroupPricing: 161.0, notes: "NOT AVAILABLE UNLESS you have done 6+ barrels with Dream Spirits. 1 per 6", status: "available" },
+    { sku: "DC distilled Apple Brandy", distilledWhen: "Mar 2018", retailMsrp: 109.99, privateGroupPricing: 91.0, notes: "", status: "available" },
+    { sku: "DC Distilled Apple Brandy", distilledWhen: "Mar 2017", retailMsrp: 119.99, privateGroupPricing: 101.0, notes: "", status: "available" },
+    { sku: "DC Distilled High Rye Bourbon", distilledWhen: "feb - april 2015", retailMsrp: 149.99, privateGroupPricing: 121.0, notes: "all DC Distilled is distilled by defunct One Eight Distilling", status: "available" },
+    { sku: "DC Distilled HIgh Rye Bourbon", distilledWhen: "june - nov 2015", retailMsrp: 149.99, privateGroupPricing: 121.0, notes: "", status: "available" },
+    { sku: "DC Distilled Wheated Bourbon", distilledWhen: "Jan 2018", retailMsrp: 149.99, privateGroupPricing: 121.0, notes: "", status: "available" },
+    { sku: "DC Distilled Wheated Bourbon", distilledWhen: "Mar 2017", retailMsrp: 159.99, privateGroupPricing: 131.0, notes: "", status: "available" },
+    { sku: "Heaven Hill 8 year Double Oaked in New Kelvin", distilledWhen: "fall 2017", retailMsrp: 119.99, privateGroupPricing: 101.0, notes: "", status: "available" },
+    { sku: "Heaven Hill 9 year Double Oaked in New Kelvin; toasted", distilledWhen: "", retailMsrp: 129.99, privateGroupPricing: 111.0, notes: "", status: "available" },
+    { sku: "Heaven Hill 13 year", distilledWhen: "Feb 2013", retailMsrp: null, privateGroupPricing: null, notes: "These are hazmat and reserved for 1 West Dupont ONLY.", status: "not_available" },
+    { sku: "Kentucky Artisan Distillery Bourbon (High Rye)", distilledWhen: "Mar 2017", retailMsrp: 99.99, privateGroupPricing: 81.0, notes: "", status: "available" },
+    { sku: "Kentucky Artisan Distillery Bourbon (High Rye)", distilledWhen: "jan - april 2015", retailMsrp: 129.99, privateGroupPricing: 111.0, notes: "", status: "available" },
+    { sku: "Kentucky Artisan Distillery Rye", distilledWhen: "Sep 2016", retailMsrp: 109.99, privateGroupPricing: 91.0, notes: "", status: "available" },
+    { sku: "Kentucky Bourbon NDA FOR DISTILLERY HIGH PROOF/HAZMAT", distilledWhen: "Sep 2014", retailMsrp: 149.99, privateGroupPricing: 131.0, notes: "Most of these are HAZMAT", status: "available" },
+    { sku: "MGP Alchemy Bourbon", distilledWhen: "Mar 2013", retailMsrp: 149.99, privateGroupPricing: 131.0, notes: "", status: "available" },
+    { sku: "MGP Alchemy Bourbon", distilledWhen: "Sep 2015", retailMsrp: 119.99, privateGroupPricing: 101.0, notes: "", status: "available" },
+    { sku: "MGP Alchemy Bourbon Double Oaked In New Kelvin", distilledWhen: "Mar 2013", retailMsrp: 159.99, privateGroupPricing: 131.0, notes: "", status: "available" },
+    { sku: "MGP High Rye Bourbon (36% rye mashbill)", distilledWhen: "May 2013", retailMsrp: 149.99, privateGroupPricing: 121.0, notes: "", status: "available" },
+    { sku: "MGP High Rye Bourbon (36% rye mashbill)", distilledWhen: "Nov 2016", retailMsrp: 99.99, privateGroupPricing: 81.0, notes: "", status: "available" },
+    { sku: "MGP High Rye Bourbon (36% rye mashbill)", distilledWhen: "2016", retailMsrp: 109.99, privateGroupPricing: 91.0, notes: "", status: "available" },
+    { sku: "MGP Light Whiskey", distilledWhen: "May 2008", retailMsrp: 129.99, privateGroupPricing: 111.0, notes: "Off Profile; Low Proof ALW", status: "available" },
+    { sku: "MGP Light Whiskey Double Oaked In New Kelvin", distilledWhen: "May 2008", retailMsrp: 139.99, privateGroupPricing: 121.0, notes: "Off Profile; Low Proof ALW", status: "available" },
+    { sku: "MGP Light Whiskey", distilledWhen: "Dec 2005", retailMsrp: 159.99, privateGroupPricing: 131.0, notes: "", status: "available" },
+    { sku: "MGP Light Whiskey Double Oaked In New Kelvin", distilledWhen: "Apr 2005", retailMsrp: 169.99, privateGroupPricing: 141.0, notes: "", status: "available" },
+    { sku: "MGP Low Rye Bourbon (21% rye mashbill)", distilledWhen: "Sept - October 2015", retailMsrp: 99.99, privateGroupPricing: 81.0, notes: "", status: "available" },
+    { sku: "MGP Low Rye Bourbon (21% rye mashbill) DO Kelvin", distilledWhen: "2015", retailMsrp: 109.99, privateGroupPricing: 91.0, notes: "", status: "available" },
+    { sku: "MGP Low Rye Bourbon (21% rye mashbill)", distilledWhen: "Jul 2018", retailMsrp: 79.99, privateGroupPricing: 61.0, notes: "INSANE VALUE!!", status: "available" },
+    { sku: "MGP Rye (51 rye/49 barley)", distilledWhen: "2015", retailMsrp: 119.99, privateGroupPricing: 101.0, notes: "", status: "available" },
+    { sku: "MGP Rye (51 rye/49 barley)", distilledWhen: "2016", retailMsrp: 109.99, privateGroupPricing: 91.0, notes: "", status: "available" },
+    { sku: "MGP Rye (95 rye/5 barley)", distilledWhen: "2015", retailMsrp: 119.99, privateGroupPricing: 101.0, notes: "", status: "available" },
+    { sku: "MGP Rye (95 rye/5 barley)", distilledWhen: "2016", retailMsrp: 109.99, privateGroupPricing: 91.0, notes: "", status: "available" },
+    { sku: "MGP Rye (95 rye/5 barley)", distilledWhen: "Apr 2011", retailMsrp: null, privateGroupPricing: null, notes: "Not Available. On reserve for 1 West Dupont only", status: "not_available" },
+    { sku: "MGP Rye (95 rye/5 barley)", distilledWhen: "Feb 2013", retailMsrp: 159.99, privateGroupPricing: 131.0, notes: "", status: "available" },
+    { sku: "MGP Rye (95 rye/5 barley)", distilledWhen: "2016", retailMsrp: 119.99, privateGroupPricing: 101.0, notes: "", status: "available" },
+    { sku: "MGP Wheated Bourbon (45% wheat mashbill)", distilledWhen: "Dec 2016", retailMsrp: 119.99, privateGroupPricing: 101.0, notes: "", status: "available" },
+    { sku: "Wild Turkey Russells Reserve Bourbon", distilledWhen: "Dec 2015", retailMsrp: 149.99, privateGroupPricing: 131.0, notes: "", status: "available" },
+    { sku: "Wild Turkey Rusells Double Oaked in New Kelvin", distilledWhen: "Dec 2015", retailMsrp: 159.99, privateGroupPricing: 141.0, notes: "", status: "available" },
+    { sku: "Willett Rye In Port Barrels", distilledWhen: "Jun 2017", retailMsrp: 109.99, privateGroupPricing: 91.0, notes: "Put in port barrels july 2019", status: "available" },
+    { sku: "Willett Wheated Bourbon in French Oak then Chadonnay Barrels", distilledWhen: "May 2017", retailMsrp: 109.99, privateGroupPricing: 91.0, notes: "Put in FO december 2019. Then chard nov 2022", status: "available" },
+    { sku: "Willett Wheated Bourbon In FO then Chard then New Kelvin Barrel", distilledWhen: "May 2017", retailMsrp: 119.99, privateGroupPricing: 101.0, notes: "Transferred to new Kelvin barrels in February 2026", status: "available" },
+    { sku: "Willett Bourbon Aged In Cabernet Barrels", distilledWhen: "May 2017", retailMsrp: 109.99, privateGroupPricing: 91.0, notes: "72corn/13rye/15barley mashbill. Put into cab nov 2022", status: "available" },
+    { sku: "Woody Creek Rye Hazmat Proof", distilledWhen: "Apr 2015", retailMsrp: 149.99, privateGroupPricing: 131.0, notes: "HAZMAT", status: "available" },
   ];
-  return rows.map(
-    ([whiskeyType, ageYears, distiller, warehouser, mashBill, numBarrels, pricePerBarrel, samplesAvailable]) => ({
-      id: uid("brl"),
-      whiskeyType,
-      ageYears,
-      distiller,
-      warehouser,
-      mashBill,
-      numBarrels,
-      pricePerBarrel,
-      status: "available", // available | in_bottling | not_available | sold
-      samplesAvailable,
-      dateAdded: new Date().toISOString(),
-    })
-  );
+  return rows.map((r) => ({ id: uid("brl"), dateAdded: new Date().toISOString(), ...r }));
 }
 
 function seedState() {

@@ -47,9 +47,9 @@ function summaryCard(pick, barrel) {
     el("div", { class: "p-6 space-y-5" }, [
       el("div", {}, [
         el("div", { class: "text-[10px] font-semibold text-gold/70 uppercase tracking-[0.2em] mb-1.5" }, "Barrel"),
-        el("div", { class: "font-serif text-xl text-ivory" }, `${barrel.whiskeyType} · ${barrel.ageYears} yrs`),
-        el("div", { class: "text-sm text-ivory/45" }, `${barrel.distiller} — ${barrel.warehouser}`),
-        el("div", { class: "text-sm text-ivory/45" }, `Mash bill ${barrel.mashBill} · ${fmtMoney(barrel.pricePerBarrel)}/barrel`),
+        el("div", { class: "font-serif text-xl text-ivory leading-snug" }, barrel.sku),
+        barrel.distilledWhen ? el("div", { class: "text-sm text-ivory/45" }, `Distilled ${barrel.distilledWhen}`) : null,
+        el("div", { class: "text-sm text-ivory/45" }, `Private Group ${fmtMoney(barrel.privateGroupPricing)} · Retail ${fmtMoney(barrel.retailMsrp)} /bottle`),
       ]),
       el("div", { class: "h-px bg-white/10" }),
       el("div", {}, [

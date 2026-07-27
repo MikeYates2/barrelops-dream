@@ -2,11 +2,32 @@ import { bulkAddBarrels } from "../store.js";
 import { el, card, button } from "../ui.js";
 import { navigate } from "../router.js";
 
-const HEADER = ["whiskeyType", "ageYears", "distiller", "warehouser", "mashBill", "numBarrels", "pricePerBarrel", "samplesAvailable"];
+// Canonical column -> internal field. Keys are normalized (trimmed,
+// lowercased, whitespace-collapsed) so headers like "Private Group Pricing "
+// or "SKU" all match regardless of the exact case/spacing a real export uses.
+const COLUMN_MAP = {
+  sku: "sku",
+  "distilled when": "distilledWhen",
+  "retail msrp": "retailMsrp",
+  "private group pricing": "privateGroupPricing",
+  notes: "notes",
+};
 
-const SAMPLE_CSV = `whiskeyType,ageYears,distiller,warehouser,mashBill,numBarrels,pricePerBarrel,samplesAvailable
-Bourbon Whiskey,9.2,MGPI of Indiana,MGPI - Lawrenceburg,60/36/4,20,2450,true
-Rye Whiskey,8.5,MGPI of Indiana,Eight Settlers,0/95/5,15,2100,true`;
+const SAMPLE_CSV = `SKU,Distilled When,Retail MSRP,Private Group Pricing,Notes
+Bardstown Bourbon Company Bourbon,Dec 2018,89.99,71,
+Barton 19 year bourbon,Apr 2007,N/A,599,Not available for retailers or restaurants. Private Group or 1 West Dupont ONLY.`;
+
+function normalizeHeader(h) {
+  return h.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function parsePrice(raw) {
+  const v = (raw || "").trim();
+  if (!v || v.toUpperCase() === "N/A") return { ok: true, value: null };
+  const n = Number(v);
+  if (isNaN(n)) return { ok: false, value: null };
+  return { ok: true, value: n };
+}
 
 function parseCsv(text) {
   const lines = text
@@ -15,8 +36,8 @@ function parseCsv(text) {
     .filter(Boolean);
   if (!lines.length) return { rows: [], errors: ["File is empty."] };
 
-  const header = lines[0].split(",").map((h) => h.trim());
-  const missing = HEADER.filter((h) => !header.includes(h));
+  const rawHeader = lines[0].split(",").map((h) => normalizeHeader(h));
+  const missing = Object.keys(COLUMN_MAP).filter((h) => !rawHeader.includes(h));
   if (missing.length) {
     return { rows: [], errors: [`Missing required column(s): ${missing.join(", ")}`] };
   }
@@ -26,29 +47,29 @@ function parseCsv(text) {
   lines.slice(1).forEach((line, idx) => {
     const cells = line.split(",").map((c) => c.trim());
     const row = {};
-    header.forEach((h, i) => (row[h] = cells[i]));
+    rawHeader.forEach((h, i) => {
+      const field = COLUMN_MAP[h];
+      if (field) row[field] = cells[i] ?? "";
+    });
     const rowNum = idx + 2;
 
-    const ageYears = Number(row.ageYears);
-    const numBarrels = Number(row.numBarrels);
-    const pricePerBarrel = Number(row.pricePerBarrel);
-    if (!row.whiskeyType || !row.distiller || !row.warehouser || !row.mashBill) {
-      errors.push(`Row ${rowNum}: missing a required text field.`);
+    if (!row.sku) {
+      errors.push(`Row ${rowNum}: missing SKU.`);
       return;
     }
-    if (isNaN(ageYears) || isNaN(numBarrels) || isNaN(pricePerBarrel)) {
-      errors.push(`Row ${rowNum}: ageYears, numBarrels, and pricePerBarrel must be numbers.`);
+    const retail = parsePrice(row.retailMsrp);
+    const privateGroup = parsePrice(row.privateGroupPricing);
+    if (!retail.ok || !privateGroup.ok) {
+      errors.push(`Row ${rowNum}: Retail MSRP and Private Group Pricing must be a number or "N/A".`);
       return;
     }
+
     rows.push({
-      whiskeyType: row.whiskeyType,
-      ageYears,
-      distiller: row.distiller,
-      warehouser: row.warehouser,
-      mashBill: row.mashBill,
-      numBarrels,
-      pricePerBarrel,
-      samplesAvailable: String(row.samplesAvailable).toLowerCase() === "true",
+      sku: row.sku,
+      distilledWhen: (row.distilledWhen || "").trim(),
+      retailMsrp: retail.value,
+      privateGroupPricing: privateGroup.value,
+      notes: (row.notes || "").trim(),
     });
   });
 
@@ -123,7 +144,7 @@ export function renderInventoryUpload() {
             el(
               "span",
               { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" },
-              "CSV data (columns: whiskeyType, ageYears, distiller, warehouser, mashBill, numBarrels, pricePerBarrel, samplesAvailable)"
+              "CSV data (columns: SKU, Distilled When, Retail MSRP, Private Group Pricing, Notes)"
             ),
             textarea,
           ]),
@@ -152,7 +173,7 @@ export function renderInventoryUpload() {
 
     wrap.replaceChildren(
       el("h1", { class: "font-serif text-4xl text-ivory mb-1" }, "Upload Inventory"),
-      el("p", { class: "text-sm text-ivory/40 mb-8" }, "Bulk-add barrels from a CSV export of your inventory."),
+      el("p", { class: "text-sm text-ivory/40 mb-8" }, "Bulk-add barrels from a CSV export of the master price list."),
       // Node.replaceChildren() stringifies a null arg to the literal text
       // "null" (unlike our el() helper) — previewCard is null until the
       // first Preview click, so it must be filtered out, not passed as-is.

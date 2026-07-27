@@ -31,9 +31,10 @@ export function mount(container, node) {
   container.replaceChildren(node);
 }
 
+// Per-bottle prices (the only thing this formats) conventionally show cents.
 export function fmtMoney(n) {
-  if (n == null || isNaN(n)) return "—";
-  return `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  if (n == null || isNaN(n)) return "N/A";
+  return `$${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function fmtDate(d) {

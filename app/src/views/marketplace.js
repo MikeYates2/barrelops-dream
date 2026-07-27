@@ -9,17 +9,16 @@ const STATUS_TONE = {
   sold: ["Reserved", "neutral"],
 };
 
-// Whiskey types are differentiated by tint and intensity of white/cream
-// overlay rather than hue, to stay within the black/white/cream palette.
-const TYPE_GRADIENT = {
-  "Bourbon Whiskey": "from-white/15 via-noir-50 to-noir",
-  "Rye Whiskey": "from-ivory/20 via-noir-50 to-noir",
-  "Single Malt Whiskey": "from-white/8 via-noir-100 to-noir",
-  "Wheated Whiskey": "from-ivory/12 via-noir-50 to-noir",
-};
-
-function typeGradient(type) {
-  return TYPE_GRADIENT[type] || "from-white/10 via-noir-50 to-noir";
+// There's no structured "type" field in the real inventory data (just a
+// SKU name), so card art is differentiated by a light keyword scan of the
+// SKU text — still just tint/intensity of white/cream, not hue, to stay
+// within the black/white/cream palette.
+function typeGradient(sku) {
+  const s = (sku || "").toLowerCase();
+  if (s.includes("rye")) return "from-ivory/20 via-noir-50 to-noir";
+  if (s.includes("brandy")) return "from-white/8 via-noir-100 to-noir";
+  if (s.includes("wheat")) return "from-ivory/12 via-noir-50 to-noir";
+  return "from-white/15 via-noir-50 to-noir";
 }
 
 // In-page smooth scroll. Deliberately not an <a href="#id"> — our router
@@ -81,21 +80,26 @@ function heroSection() {
 function barrelCard(b, role) {
   const [statusLabel, statusTone] = STATUS_TONE[b.status] || STATUS_TONE.available;
   return card([
-    el("div", { class: `h-44 flex flex-col items-center justify-center relative bg-gradient-to-br ${typeGradient(b.whiskeyType)} border-b border-white/10` }, [
-      el("span", { class: "text-[10px] tracking-[0.3em] text-gold/70 uppercase mb-2" }, b.distiller),
-      el("span", { class: "font-serif text-3xl text-ivory tracking-wide text-center px-4" }, b.whiskeyType),
-      el("span", { class: "text-xs text-ivory/50 tracking-widest uppercase mt-2" }, `${b.ageYears} Years`),
-      el("div", { class: "absolute top-3 right-3" }, badge(b.samplesAvailable ? "Samples Ready" : "No Samples", b.samplesAvailable ? "gold" : "neutral")),
-    ]),
+    el(
+      "div",
+      { class: `min-h-[9.5rem] flex flex-col items-center justify-center relative bg-gradient-to-br ${typeGradient(b.sku)} border-b border-white/10 px-5 py-6` },
+      [
+        el("span", { class: "font-serif text-xl text-ivory tracking-wide text-center leading-snug line-clamp-3" }, b.sku),
+        b.distilledWhen ? el("span", { class: "text-[11px] text-ivory/45 tracking-widest uppercase mt-2" }, `Distilled ${b.distilledWhen}`) : null,
+      ]
+    ),
     el("div", { class: "p-5 flex flex-col gap-3" }, [
-      el("div", { class: "text-xs text-ivory/40 tracking-wide" }, b.warehouser),
-      el("div", { class: "flex items-center justify-between text-xs text-ivory/50" }, [
-        el("span", {}, `Mash Bill ${b.mashBill}`),
-        el("span", {}, `${b.numBarrels} barrels`),
+      b.notes ? el("div", { class: "text-xs text-ivory/40 italic leading-relaxed line-clamp-2" }, b.notes) : null,
+      el("div", { class: "flex items-center justify-between text-xs text-ivory/45" }, [
+        el("span", {}, "Retail MSRP"),
+        el("span", {}, `${fmtMoney(b.retailMsrp)} / bottle`),
       ]),
       el("div", { class: "h-px bg-white/10 my-1" }),
       el("div", { class: "flex items-center justify-between" }, [
-        el("span", { class: "font-serif text-2xl text-gold-light" }, fmtMoney(b.pricePerBarrel)),
+        el("div", {}, [
+          el("div", { class: "font-serif text-2xl text-gold-light" }, fmtMoney(b.privateGroupPricing)),
+          el("div", { class: "text-[10px] text-ivory/35 uppercase tracking-widest" }, "Private Group / bottle"),
+        ]),
         badge(statusLabel, statusTone),
       ]),
       role === "customer" && b.status === "available"
@@ -108,7 +112,7 @@ function barrelCard(b, role) {
 }
 
 function darkTable(barrels) {
-  const cols = ["Whiskey Type", "Age", "Distiller", "Warehouser", "Mash Bill", "# Barrels", "Price", "Status", "Samples"];
+  const cols = ["SKU", "Distilled When", "Retail MSRP", "Private Group", "Status", "Notes"];
   return card(
     [
       el("div", { class: "overflow-x-auto" }, [
@@ -128,15 +132,12 @@ function darkTable(barrels) {
             barrels.map((b) => {
               const [statusLabel, statusTone] = STATUS_TONE[b.status] || STATUS_TONE.available;
               return el("tr", { class: "border-b border-white/5 hover:bg-white/[0.03]" }, [
-                el("td", { class: "px-4 py-3 font-medium text-ivory whitespace-nowrap" }, b.whiskeyType),
-                el("td", { class: "px-4 py-3 text-ivory/60" }, String(b.ageYears)),
-                el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, b.distiller),
-                el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, b.warehouser),
-                el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, b.mashBill),
-                el("td", { class: "px-4 py-3 text-ivory/60" }, String(b.numBarrels)),
-                el("td", { class: "px-4 py-3 text-gold-light font-medium whitespace-nowrap" }, fmtMoney(b.pricePerBarrel)),
+                el("td", { class: "px-4 py-3 font-medium text-ivory max-w-xs" }, b.sku),
+                el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, b.distilledWhen || "—"),
+                el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, fmtMoney(b.retailMsrp)),
+                el("td", { class: "px-4 py-3 text-gold-light font-medium whitespace-nowrap" }, fmtMoney(b.privateGroupPricing)),
                 el("td", { class: "px-4 py-3" }, badge(statusLabel, statusTone)),
-                el("td", { class: "px-4 py-3" }, badge(b.samplesAvailable ? "Available" : "Not Avail.", b.samplesAvailable ? "green" : "red")),
+                el("td", { class: "px-4 py-3 text-ivory/40 text-xs max-w-xs truncate" }, b.notes || "—"),
               ]);
             })
           ),
@@ -267,7 +268,7 @@ export function renderMarketplace() {
   function renderResults() {
     const barrels = state.barrels.filter((b) => {
       if (!query) return true;
-      const hay = `${b.whiskeyType} ${b.distiller} ${b.warehouser} ${b.mashBill}`.toLowerCase();
+      const hay = `${b.sku} ${b.distilledWhen} ${b.notes}`.toLowerCase();
       return hay.includes(query.toLowerCase());
     });
 
@@ -303,7 +304,7 @@ export function renderMarketplace() {
 
   const searchInput = el("input", {
     type: "search",
-    placeholder: "Search listings, distillers, warehousers, mash bills...",
+    placeholder: "Search by SKU, distilled date, or notes...",
     class:
       "w-full rounded-full glass border border-white/15 px-5 py-3 text-sm text-ivory placeholder:text-ivory/30 focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/50",
     oninput: (e) => {
