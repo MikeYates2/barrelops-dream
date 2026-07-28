@@ -209,6 +209,7 @@ export function createPick({ barrelId, contact }) {
     createdAt: new Date().toISOString(),
     contact, // { name, email, phone, location, groupType }
     pickMethod: null, // '2A_ship_samples' | '2B_in_person'
+    shippingAddress: null, // { street, city, state, zip } — set when shipping samples
     requestedDates: [],
     approvedDate: null,
     dateStatus: null, // 'pending' | 'approved'
@@ -244,6 +245,13 @@ export function setPickMethod(id, method) {
     p.dateStatus = null;
     p.phase = 3; // ship-samples path moves straight to label creation
   }
+  notify();
+}
+
+export function setShippingAddress(id, address) {
+  const p = getPick(id);
+  if (!p) return;
+  p.shippingAddress = address;
   notify();
 }
 

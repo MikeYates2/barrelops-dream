@@ -1,7 +1,26 @@
-import { getBarrel, createPick, setPickMethod, requestDates, getState, setCustomerEmail } from "../store.js";
+import { getBarrel, createPick, setPickMethod, requestDates, setShippingAddress, getState, setCustomerEmail } from "../store.js";
 import { el, card, button, field, textInput, selectInput } from "../ui.js";
 import { renderCalendar } from "../components/calendar.js";
 import { navigate } from "../router.js";
+
+// States Dream Spirits currently distributes to. Retailers must hold a
+// license in one of these to select samples/barrels.
+const RETAILER_STATES = [
+  { value: "CA", label: "California (CA)" },
+  { value: "CT", label: "Connecticut (CT)" },
+  { value: "FL", label: "Florida (FL)" },
+  { value: "GA", label: "Georgia (GA)" },
+  { value: "ID", label: "Idaho (ID)" },
+  { value: "MD", label: "Maryland (MD)" },
+  { value: "NV", label: "Nevada (NV)" },
+  { value: "NJ", label: "New Jersey (NJ)" },
+  { value: "NY", label: "New York (NY)" },
+  { value: "SC", label: "South Carolina (SC)" },
+  { value: "TX", label: "Texas (TX)" },
+  { value: "VA", label: "Virginia (VA)" },
+  { value: "DC", label: "Washington D.C. (DC)" },
+  { value: "WV", label: "West Virginia (WV)" },
+];
 
 export function renderPickWizard({ barrelId }) {
   const barrel = getBarrel(barrelId);
@@ -20,11 +39,13 @@ export function renderPickWizard({ barrelId }) {
     phone: "",
     location: "",
     groupType: "private_group",
+    retailerState: "",
   };
   // Matches the <select>'s default option so the visible selection and
   // internal state agree even if the user never touches the dropdown.
   let method = "2A_ship_samples";
   const selectedDates = new Set();
+  const shipping = { street: "", city: "", state: "", zip: "" };
   const errorBox = el("div", { class: "hidden text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mb-4" });
 
   const wrap = el("div", { class: "px-8 py-16 max-w-2xl mx-auto" });
@@ -63,6 +84,24 @@ export function renderPickWizard({ barrelId }) {
   }
 
   function step1() {
+    const retailerBlock =
+      contact.groupType === "retailer"
+        ? el("div", { class: "mt-6 pt-6 border-t border-white/10" }, [
+            field(
+              "State (Retail License)",
+              selectInput(
+                [{ value: "", label: "Select your state..." }, ...RETAILER_STATES],
+                { value: contact.retailerState, onchange: (e) => (contact.retailerState = e.target.value) }
+              )
+            ),
+            el(
+              "p",
+              { class: "text-xs text-ivory/35 mt-2" },
+              "If we don't distribute to your state and you're interested in our product, please contact us."
+            ),
+          ])
+        : null;
+
     return card([
       el("div", { class: "p-8" }, [
         el("h2", { class: "font-serif text-2xl text-ivory mb-1" }, "Contact Information"),
@@ -78,7 +117,13 @@ export function renderPickWizard({ barrelId }) {
                 { value: "private_group", label: "Private Group" },
                 { value: "retailer", label: "Retailer" },
               ],
-              { value: contact.groupType, onchange: (e) => (contact.groupType = e.target.value) }
+              {
+                value: contact.groupType,
+                onchange: (e) => {
+                  contact.groupType = e.target.value;
+                  draw();
+                },
+              }
             )
           ),
           field(
@@ -87,12 +132,17 @@ export function renderPickWizard({ barrelId }) {
             null
           ),
         ]),
+        retailerBlock,
         el("div", { class: "flex justify-end pt-8" }, [
           button("Continue", {
             variant: "gold",
             onClick: () => {
               if (!contact.name.trim() || !contact.email.trim() || !contact.phone.trim() || !contact.location.trim()) {
                 showError("Please fill in all contact fields to continue.");
+                return;
+              }
+              if (contact.groupType === "retailer" && !contact.retailerState) {
+                showError("Please select the state your retail license is from.");
                 return;
               }
               errorBox.classList.add("hidden");
@@ -107,8 +157,8 @@ export function renderPickWizard({ barrelId }) {
 
   function step2() {
     const methodOptions = [
-      { value: "2A_ship_samples", label: "2A — Ship Samples" },
-      { value: "2B_in_person", label: "2B — In-Person Pick" },
+      { value: "2A_ship_samples", label: "Ship Samples" },
+      { value: "2B_in_person", label: "In-Person Pick" },
     ];
 
     const calendarBlock =
@@ -123,6 +173,24 @@ export function renderPickWizard({ barrelId }) {
                 else if (selectedDates.size < 3) selectedDates.add(iso);
               },
             }),
+          ])
+        : null;
+
+    const shippingBlock =
+      method === "2A_ship_samples"
+        ? el("div", { class: "mt-6 pt-6 border-t border-white/10" }, [
+            el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Shipping Address"),
+            el("p", { class: "text-xs text-ivory/35 mb-4" }, "Where should we send your samples?"),
+            el("div", { class: "grid grid-cols-2 gap-5" }, [
+              el(
+                "div",
+                { class: "col-span-2" },
+                field("Street Address", textInput({ type: "text", value: shipping.street, oninput: (e) => (shipping.street = e.target.value) }))
+              ),
+              field("City", textInput({ type: "text", value: shipping.city, oninput: (e) => (shipping.city = e.target.value) })),
+              field("State", textInput({ type: "text", placeholder: "e.g. KY", value: shipping.state, oninput: (e) => (shipping.state = e.target.value) })),
+              field("ZIP Code", textInput({ type: "text", value: shipping.zip, oninput: (e) => (shipping.zip = e.target.value) })),
+            ]),
           ])
         : null;
 
@@ -141,6 +209,7 @@ export function renderPickWizard({ barrelId }) {
           })
         ),
         calendarBlock,
+        shippingBlock,
         el("div", { class: "flex justify-between pt-8" }, [
           button("Back", { variant: "secondary", onClick: () => { step = 1; draw(); } }),
           button("Submit Pick Request", {
@@ -154,11 +223,23 @@ export function renderPickWizard({ barrelId }) {
                 showError("Please select at least one preferred date.");
                 return;
               }
+              if (method === "2A_ship_samples" && (!shipping.street.trim() || !shipping.city.trim() || !shipping.state.trim() || !shipping.zip.trim())) {
+                showError("Please fill in your full shipping address.");
+                return;
+              }
               errorBox.classList.add("hidden");
               setCustomerEmail(contact.email.trim());
               const pick = createPick({ barrelId, contact: { ...contact, email: contact.email.trim() } });
               setPickMethod(pick.id, method);
               if (method === "2B_in_person") requestDates(pick.id, Array.from(selectedDates));
+              if (method === "2A_ship_samples") {
+                setShippingAddress(pick.id, {
+                  street: shipping.street.trim(),
+                  city: shipping.city.trim(),
+                  state: shipping.state.trim(),
+                  zip: shipping.zip.trim(),
+                });
+              }
               navigate(`/pick/${pick.id}`);
             },
           }),

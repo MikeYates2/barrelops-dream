@@ -58,13 +58,29 @@ function summaryCard(pick, barrel) {
         el("div", { class: "text-sm text-ivory/45" }, pick.contact.email),
         el("div", { class: "text-sm text-ivory/45" }, pick.contact.phone),
         el("div", { class: "text-sm text-ivory/45 mb-2" }, pick.contact.location),
-        badge(pick.contact.groupType === "retailer" ? "Retailer" : "Private Group", "blue"),
+        el("div", { class: "flex items-center gap-2 flex-wrap" }, [
+          badge(pick.contact.groupType === "retailer" ? "Retailer" : "Private Group", "blue"),
+          pick.contact.groupType === "retailer" && pick.contact.retailerState
+            ? badge(`Licensed in ${pick.contact.retailerState}`, "neutral")
+            : null,
+        ]),
       ]),
       el("div", { class: "h-px bg-white/10" }),
       el("div", {}, [
         el("div", { class: "text-[10px] font-semibold text-gold/70 uppercase tracking-[0.2em] mb-1.5" }, "Pick Method"),
-        badge(pick.pickMethod === "2B_in_person" ? "2B — In-Person Pick" : "2A — Ship Samples", "gold"),
+        badge(pick.pickMethod === "2B_in_person" ? "In-Person Pick" : "Ship Samples", "gold"),
       ]),
+      pick.shippingAddress
+        ? el("div", {}, [
+            el("div", { class: "text-[10px] font-semibold text-gold/70 uppercase tracking-[0.2em] mb-1.5 mt-3" }, "Shipping Address"),
+            el("div", { class: "text-sm text-ivory/45" }, pick.shippingAddress.street),
+            el(
+              "div",
+              { class: "text-sm text-ivory/45" },
+              `${pick.shippingAddress.city}, ${pick.shippingAddress.state} ${pick.shippingAddress.zip}`
+            ),
+          ])
+        : null,
     ]),
   ]);
 }
