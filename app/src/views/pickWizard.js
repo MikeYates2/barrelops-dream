@@ -1,6 +1,7 @@
-import { getBarrel, createPick, setPickMethod, requestDates, setShippingAddress, getState, setCustomerEmail } from "../store.js";
+import { getBarrel, createPick, setPickMethod, requestDates, setShippingAddress, setSampleSelections, getState, setCustomerEmail } from "../store.js";
 import { el, card, button, field, textInput, selectInput } from "../ui.js";
 import { renderCalendar } from "../components/calendar.js";
+import { renderSampleSelector } from "../components/sampleSelector.js";
 import { navigate } from "../router.js";
 
 // States Dream Spirits currently distributes to. Retailers must hold a
@@ -46,6 +47,9 @@ export function renderPickWizard({ barrelId }) {
   let method = "2A_ship_samples";
   const selectedDates = new Set();
   const shipping = { street: "", city: "", state: "", zip: "" };
+  // The barrel this pick started from is always included in the sample
+  // shipment — it's the reason the customer is here.
+  const sampleBarrelIds = new Set([barrelId]);
   const errorBox = el("div", { class: "hidden text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mb-4" });
 
   const wrap = el("div", { class: "px-8 py-16 max-w-2xl mx-auto" });
@@ -194,6 +198,19 @@ export function renderPickWizard({ barrelId }) {
           ])
         : null;
 
+    const sampleSelectorBlock =
+      method === "2A_ship_samples"
+        ? el("div", { class: "mt-6 pt-6 border-t border-white/10" }, [
+            el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Select Your Samples"),
+            el("p", { class: "text-xs text-ivory/35 mb-4" }, "Choose up to 5 offerings to include in this shipment."),
+            renderSampleSelector({
+              barrels: state.barrels,
+              selected: sampleBarrelIds,
+              lockedId: barrelId,
+            }),
+          ])
+        : null;
+
     return card([
       el("div", { class: "p-8" }, [
         el("h2", { class: "font-serif text-2xl text-ivory mb-1" }, "Choose Pick Method"),
@@ -210,6 +227,7 @@ export function renderPickWizard({ barrelId }) {
         ),
         calendarBlock,
         shippingBlock,
+        sampleSelectorBlock,
         el("div", { class: "flex justify-between pt-8" }, [
           button("Back", { variant: "secondary", onClick: () => { step = 1; draw(); } }),
           button("Submit Pick Request", {
@@ -239,6 +257,7 @@ export function renderPickWizard({ barrelId }) {
                   state: shipping.state.trim(),
                   zip: shipping.zip.trim(),
                 });
+                setSampleSelections(pick.id, Array.from(sampleBarrelIds));
               }
               navigate(`/pick/${pick.id}`);
             },

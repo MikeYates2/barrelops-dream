@@ -81,6 +81,19 @@ function summaryCard(pick, barrel) {
             ),
           ])
         : null,
+      pick.sampleBarrelIds && pick.sampleBarrelIds.length
+        ? el("div", {}, [
+            el("div", { class: "text-[10px] font-semibold text-gold/70 uppercase tracking-[0.2em] mb-1.5 mt-3" }, `Samples Requested (${pick.sampleBarrelIds.length})`),
+            el(
+              "ul",
+              { class: "space-y-1" },
+              pick.sampleBarrelIds.map((id) => {
+                const b = getBarrel(id);
+                return el("li", { class: "text-sm text-ivory/45" }, b ? b.sku : "Barrel unavailable");
+              })
+            ),
+          ])
+        : null,
     ]),
   ]);
 }
