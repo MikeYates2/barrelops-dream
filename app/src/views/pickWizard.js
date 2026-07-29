@@ -1,27 +1,18 @@
-import { getBarrel, createPick, setPickMethod, requestDates, setShippingAddress, setSampleSelections, getState, setCustomerEmail } from "../store.js";
+import {
+  getBarrel,
+  createPick,
+  setPickMethod,
+  requestDates,
+  setShippingAddress,
+  setSampleSelections,
+  getState,
+  setCustomerEmail,
+  RETAILER_STATES,
+} from "../store.js";
 import { el, card, button, field, textInput, selectInput } from "../ui.js";
 import { renderCalendar } from "../components/calendar.js";
 import { renderSampleSelector } from "../components/sampleSelector.js";
 import { navigate } from "../router.js";
-
-// States Dream Spirits currently distributes to. Retailers must hold a
-// license in one of these to select samples/barrels.
-const RETAILER_STATES = [
-  { value: "CA", label: "California (CA)" },
-  { value: "CT", label: "Connecticut (CT)" },
-  { value: "FL", label: "Florida (FL)" },
-  { value: "GA", label: "Georgia (GA)" },
-  { value: "ID", label: "Idaho (ID)" },
-  { value: "MD", label: "Maryland (MD)" },
-  { value: "NV", label: "Nevada (NV)" },
-  { value: "NJ", label: "New Jersey (NJ)" },
-  { value: "NY", label: "New York (NY)" },
-  { value: "SC", label: "South Carolina (SC)" },
-  { value: "TX", label: "Texas (TX)" },
-  { value: "VA", label: "Virginia (VA)" },
-  { value: "DC", label: "Washington D.C. (DC)" },
-  { value: "WV", label: "West Virginia (WV)" },
-];
 
 export function renderPickWizard({ barrelId }) {
   const barrel = getBarrel(barrelId);
@@ -39,8 +30,11 @@ export function renderPickWizard({ barrelId }) {
     email: state.currentCustomerEmail || "",
     phone: "",
     location: "",
-    groupType: "private_group",
-    retailerState: "",
+    // Pre-filled from the account-level type set at login, so a returning
+    // customer isn't asked the same question twice — still editable per
+    // pick in case this particular order differs from their account.
+    groupType: state.customerGroupType || "private_group",
+    retailerState: state.customerRetailerState || "",
   };
   // Matches the <select>'s default option so the visible selection and
   // internal state agree even if the user never touches the dropdown.

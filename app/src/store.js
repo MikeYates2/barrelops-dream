@@ -15,6 +15,25 @@ function uid(prefix) {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// States Dream Spirits currently distributes to. Retailers (whether at
+// login or on a specific pick) must hold a license in one of these.
+const RETAILER_STATES = [
+  { value: "CA", label: "California (CA)" },
+  { value: "CT", label: "Connecticut (CT)" },
+  { value: "FL", label: "Florida (FL)" },
+  { value: "GA", label: "Georgia (GA)" },
+  { value: "ID", label: "Idaho (ID)" },
+  { value: "MD", label: "Maryland (MD)" },
+  { value: "NV", label: "Nevada (NV)" },
+  { value: "NJ", label: "New Jersey (NJ)" },
+  { value: "NY", label: "New York (NY)" },
+  { value: "SC", label: "South Carolina (SC)" },
+  { value: "TX", label: "Texas (TX)" },
+  { value: "VA", label: "Virginia (VA)" },
+  { value: "DC", label: "Washington D.C. (DC)" },
+  { value: "WV", label: "West Virginia (WV)" },
+];
+
 // Seeded from the real Dream Spirits master price list. Pricing here is
 // per bottle (retail MSRP and private-group price), not per barrel — each
 // row is a single barrel's SKU, matching the CSV upload template below.
@@ -81,6 +100,8 @@ function seedState() {
     currentRole: null, // 'staff' | 'customer' | null (logged out)
     currentCustomerEmail: null,
     customerName: null,
+    customerGroupType: null, // 'private_group' | 'retailer' — set at customer login
+    customerRetailerState: null,
     staffName: null,
     barrels: seedBarrels(),
     picks: [],
@@ -97,6 +118,8 @@ function load() {
     if (!parsed.membershipRequests) parsed.membershipRequests = [];
     if (parsed.customerName === undefined) parsed.customerName = null;
     if (parsed.staffName === undefined) parsed.staffName = null;
+    if (parsed.customerGroupType === undefined) parsed.customerGroupType = null;
+    if (parsed.customerRetailerState === undefined) parsed.customerRetailerState = null;
     return parsed;
   } catch (e) {
     console.warn("Failed to load state, reseeding", e);
@@ -138,10 +161,12 @@ export function resetDemoData() {
 // a determined attacker. Real staff auth needs a backend.
 const STAFF_ACCESS_CODE = "DREAMSTAFF";
 
-export function loginAsCustomer({ name, email }) {
+export function loginAsCustomer({ name, email, groupType, retailerState }) {
   state.currentRole = "customer";
   state.customerName = name;
   state.currentCustomerEmail = email;
+  state.customerGroupType = groupType || "private_group";
+  state.customerRetailerState = groupType === "retailer" ? retailerState || null : null;
   notify();
   return { ok: true };
 }
@@ -161,6 +186,8 @@ export function logout() {
   state.staffName = null;
   state.customerName = null;
   state.currentCustomerEmail = null;
+  state.customerGroupType = null;
+  state.customerRetailerState = null;
   notify();
 }
 
@@ -336,4 +363,4 @@ export function requestMembership({ name, email }) {
   persist();
 }
 
-export { PHASES, uid };
+export { PHASES, RETAILER_STATES, uid };

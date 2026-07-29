@@ -77,8 +77,37 @@ function heroSection() {
   );
 }
 
-function barrelCard(b, role) {
+// Pricing shown depends on who's looking: staff sees both real columns;
+// a private-group customer sees only Private Group Pricing; a retailer
+// customer sees Retail MSRP plus a calculated wholesale price (the 70%
+// figure isn't in the source data — it's derived here, not stored).
+function pricingRows(b, role, groupType) {
+  const isRetailer = role === "customer" && groupType === "retailer";
+  const isStaff = role === "staff";
+
+  if (isRetailer) {
+    const wholesale = b.retailMsrp == null ? null : b.retailMsrp * 0.7;
+    return {
+      secondary: { label: "Retail MSRP", value: fmtMoney(b.retailMsrp) },
+      primary: { label: "Wholesale (70%) / bottle", value: fmtMoney(wholesale) },
+    };
+  }
+  if (isStaff) {
+    return {
+      secondary: { label: "Retail MSRP", value: fmtMoney(b.retailMsrp) },
+      primary: { label: "Private Group / bottle", value: fmtMoney(b.privateGroupPricing) },
+    };
+  }
+  // Private-group customer (default): only the one price they're quoted.
+  return {
+    secondary: null,
+    primary: { label: "Private Group / bottle", value: fmtMoney(b.privateGroupPricing) },
+  };
+}
+
+function barrelCard(b, role, groupType) {
   const [statusLabel, statusTone] = STATUS_TONE[b.status] || STATUS_TONE.available;
+  const { secondary, primary } = pricingRows(b, role, groupType);
   return card([
     el(
       "div",
@@ -90,15 +119,17 @@ function barrelCard(b, role) {
     ),
     el("div", { class: "p-5 flex flex-col gap-3" }, [
       b.notes ? el("div", { class: "text-xs text-ivory/40 italic leading-relaxed line-clamp-2" }, b.notes) : null,
-      el("div", { class: "flex items-center justify-between text-xs text-ivory/45" }, [
-        el("span", {}, "Retail MSRP"),
-        el("span", {}, `${fmtMoney(b.retailMsrp)} / bottle`),
-      ]),
-      el("div", { class: "h-px bg-white/10 my-1" }),
+      secondary
+        ? el("div", { class: "flex items-center justify-between text-xs text-ivory/45" }, [
+            el("span", {}, secondary.label),
+            el("span", {}, `${secondary.value} / bottle`),
+          ])
+        : null,
+      secondary ? el("div", { class: "h-px bg-white/10 my-1" }) : null,
       el("div", { class: "flex items-center justify-between" }, [
         el("div", {}, [
-          el("div", { class: "font-serif text-2xl text-gold-light" }, fmtMoney(b.privateGroupPricing)),
-          el("div", { class: "text-[10px] text-ivory/35 uppercase tracking-widest" }, "Private Group / bottle"),
+          el("div", { class: "font-serif text-2xl text-gold-light" }, primary.value),
+          el("div", { class: "text-[10px] text-ivory/35 uppercase tracking-widest" }, primary.label),
         ]),
         badge(statusLabel, statusTone),
       ]),
@@ -279,7 +310,7 @@ export function renderMarketplace() {
         ? el(
             "div",
             { class: "grid sm:grid-cols-2 lg:grid-cols-3 gap-6" },
-            barrels.map((b) => barrelCard(b, state.currentRole))
+            barrels.map((b) => barrelCard(b, state.currentRole, state.customerGroupType))
           )
         : el("div", { class: "text-center text-ivory/30 py-20" }, "No barrels match your search.");
 
