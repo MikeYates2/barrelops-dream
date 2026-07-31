@@ -5,10 +5,11 @@ const STORAGE_KEY = "barrelPickOps.v1";
 const PHASES = [
   { n: 1, key: "intake", label: "Intake" },
   { n: 2, key: "method", label: "Choose Pick Method" },
-  { n: 3, key: "label", label: "Label Creation" },
-  { n: 4, key: "bottling", label: "Bottling" },
-  { n: 5, key: "fulfillment", label: "Payment & Fulfillment" },
-  { n: 6, key: "complete", label: "Complete" },
+  { n: 3, key: "samples", label: "Sample Fulfillment" },
+  { n: 4, key: "label", label: "Label Creation" },
+  { n: 5, key: "bottling", label: "Bottling" },
+  { n: 6, key: "fulfillment", label: "Payment & Fulfillment" },
+  { n: 7, key: "complete", label: "Complete" },
 ];
 
 function uid(prefix) {
@@ -238,6 +239,9 @@ export function createPick({ barrelId, contact }) {
     pickMethod: null, // '2A_ship_samples' | '2B_in_person'
     shippingAddress: null, // { street, city, state, zip } — set when shipping samples
     sampleBarrelIds: [], // barrel ids to pull samples from — set when shipping samples
+    sampleTracking: null, // tracking number for the sample shipment — set by staff
+    finalSampleBarrelIds: [], // customer's final selection from the shipped samples
+    finalSampleStatus: null, // null | 'submitted' | 'approved'
     requestedDates: [],
     approvedDate: null,
     dateStatus: null, // 'pending' | 'approved'
@@ -272,7 +276,7 @@ export function setPickMethod(id, method) {
     p.phase = 2; // stays at phase 2 until staff approves a date
   } else {
     p.dateStatus = null;
-    p.phase = 3; // ship-samples path moves straight to label creation
+    p.phase = 3; // ship-samples path moves to Sample Fulfillment
   }
   notify();
 }
@@ -311,7 +315,36 @@ export function approveDate(id, date) {
   if (!p) return;
   p.approvedDate = date;
   p.dateStatus = "approved";
-  p.phase = 3;
+  p.phase = 4; // in-person visits skip Sample Fulfillment, straight to Label Creation
+  notify();
+}
+
+export function setSampleTracking(id, trackingNumber) {
+  const p = getPick(id);
+  if (!p) return;
+  p.sampleTracking = trackingNumber;
+  notify();
+}
+
+export function submitFinalSampleSelections(id, barrelIds) {
+  const p = getPick(id);
+  if (!p) return;
+  p.finalSampleBarrelIds = barrelIds;
+  p.finalSampleStatus = "submitted";
+  notify();
+}
+
+export function approveFinalSampleSelections(id) {
+  const p = getPick(id);
+  if (!p) return;
+  p.finalSampleStatus = "approved";
+  notify();
+}
+
+export function advanceToLabelCreation(id) {
+  const p = getPick(id);
+  if (!p) return;
+  p.phase = 4;
   notify();
 }
 
@@ -319,7 +352,7 @@ export function uploadLogo(id, logo) {
   const p = getPick(id);
   if (!p) return;
   p.logo = logo; // { fileName, dataUrl, uploadedAt }
-  if (p.phase < 4) p.phase = 4;
+  if (p.phase < 5) p.phase = 5; // Bottling
   notify();
 }
 
@@ -335,7 +368,7 @@ export function updateBottling(id, patch) {
 export function advanceToFulfillment(id) {
   const p = getPick(id);
   if (!p) return;
-  p.phase = 5;
+  p.phase = 6;
   notify();
 }
 
@@ -343,7 +376,7 @@ export function markListingComplete(id) {
   const p = getPick(id);
   if (!p) return;
   p.fulfillment.listingComplete = true;
-  p.phase = 6;
+  p.phase = 7;
   const barrel = getBarrel(p.barrelId);
   if (barrel) barrel.status = "sold";
   notify();

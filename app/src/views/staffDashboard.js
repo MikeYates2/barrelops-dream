@@ -109,7 +109,7 @@ export function renderStaffDashboard() {
                       el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, p.contact.name),
                       el("td", { class: "px-4 py-3" }, badge(p.contact.groupType === "retailer" ? "Retailer" : "Private Group", "blue")),
                       el("td", { class: "px-4 py-3 text-ivory/50 whitespace-nowrap" }, p.pickMethod === "2B_in_person" ? "In-Person" : "Ship Samples"),
-                      el("td", { class: "px-4 py-3" }, badge(phaseInfo ? phaseInfo.label : "—", p.phase === 6 ? "green" : "amber")),
+                      el("td", { class: "px-4 py-3" }, badge(phaseInfo ? phaseInfo.label : "—", p.phase === 7 ? "green" : "amber")),
                       el("td", { class: "px-4 py-3 text-ivory/40 whitespace-nowrap" }, fmtDate(p.createdAt)),
                       el("td", { class: "px-4 py-3 text-right" }, el("a", { href: `#/pick/${p.id}`, class: "text-xs text-gold/80 hover:text-gold underline underline-offset-2" }, "View")),
                     ]);

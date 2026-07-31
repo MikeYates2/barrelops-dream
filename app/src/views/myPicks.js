@@ -41,7 +41,7 @@ export function renderMyPicks() {
                   ]),
                   el("div", { class: "flex items-center gap-2" }, [
                     p.pickMethod === "2B_in_person" ? badge("In-Person", "blue") : badge("Ship Samples", "blue"),
-                    badge(phaseInfo ? phaseInfo.label : "—", p.phase === 6 ? "green" : "amber"),
+                    badge(phaseInfo ? phaseInfo.label : "—", p.phase === 7 ? "green" : "amber"),
                   ]),
                 ]),
               ])

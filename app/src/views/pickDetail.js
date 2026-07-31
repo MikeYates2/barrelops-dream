@@ -7,9 +7,14 @@ import {
   updateBottling,
   advanceToFulfillment,
   markListingComplete,
+  setSampleTracking,
+  submitFinalSampleSelections,
+  approveFinalSampleSelections,
+  advanceToLabelCreation,
   PHASES,
 } from "../store.js";
 import { el, card, button, badge, fmtDate, fmtStayWindow, fmtMoney, field, selectInput, textInput } from "../ui.js";
+import { renderSampleSelector } from "../components/sampleSelector.js";
 
 function phaseTracker(currentPhase) {
   return el(
@@ -146,7 +151,7 @@ function actionPanel(pick, barrel, role, refresh) {
     }
   }
 
-  if (pick.pickMethod === "2B_in_person" && pick.dateStatus === "approved" && pick.phase === 3 && !pick.logo) {
+  if (pick.pickMethod === "2B_in_person" && pick.dateStatus === "approved" && pick.phase === 4 && !pick.logo) {
     panels.push(
       card([
         el("div", { class: "p-6 flex items-center gap-3" }, [
@@ -157,8 +162,151 @@ function actionPanel(pick, barrel, role, refresh) {
     );
   }
 
-  // Phase 3: label creation — customer uploads logo
-  if (pick.phase === 3 || (pick.phase >= 4 && pick.logo)) {
+  // Phase 3: sample fulfillment — staff ships samples & enters tracking,
+  // customer confirms which of the shipped samples they've chosen.
+  if (pick.pickMethod === "2A_ship_samples" && pick.phase === 3) {
+    if (role === "staff") {
+      let trackingVal = pick.sampleTracking || "";
+      panels.push(
+        card([
+          el("div", { class: "p-6" }, [
+            ...panelHeading("Shipment Tracking", "Enter the tracking number once the sample shipment goes out."),
+            field("Tracking Number", textInput({ type: "text", value: trackingVal, oninput: (e) => (trackingVal = e.target.value) })),
+            el("div", { class: "pt-4" }, [
+              button("Save Tracking Number", {
+                variant: "secondary",
+                onClick: () => {
+                  setSampleTracking(pick.id, trackingVal.trim());
+                  refresh();
+                },
+              }),
+            ]),
+          ]),
+        ])
+      );
+
+      if (pick.finalSampleStatus === "approved") {
+        panels.push(
+          card([
+            el("div", { class: "p-6" }, [
+              ...panelHeading("Sample Selection Approved", "Once label creation is ready to begin, advance this pick."),
+              el(
+                "ul",
+                { class: "space-y-1 mb-4" },
+                pick.finalSampleBarrelIds.map((id) => {
+                  const b = getBarrel(id);
+                  return el("li", { class: "text-sm text-ivory/70" }, b ? b.sku : "Barrel unavailable");
+                })
+              ),
+              button("Advance to Label Creation", {
+                variant: "gold",
+                onClick: () => {
+                  advanceToLabelCreation(pick.id);
+                  refresh();
+                },
+              }),
+            ]),
+          ])
+        );
+      } else if (pick.finalSampleStatus === "submitted") {
+        panels.push(
+          card([
+            el("div", { class: "p-6" }, [
+              ...panelHeading("Approve Sample Selection", "The customer has confirmed which samples they've chosen."),
+              el(
+                "ul",
+                { class: "space-y-1 mb-4" },
+                pick.finalSampleBarrelIds.map((id) => {
+                  const b = getBarrel(id);
+                  return el("li", { class: "text-sm text-ivory/70" }, b ? b.sku : "Barrel unavailable");
+                })
+              ),
+              button("Approve Selection", {
+                variant: "gold",
+                onClick: () => {
+                  approveFinalSampleSelections(pick.id);
+                  refresh();
+                },
+              }),
+            ]),
+          ])
+        );
+      } else {
+        panels.push(card([el("div", { class: "p-6" }, panelHeading("Waiting on Sample Selection", "Customer has not confirmed their sample selection yet."))]));
+      }
+    } else {
+      panels.push(
+        card([
+          el("div", { class: "p-6" }, [
+            ...panelHeading(
+              "Sample Shipment",
+              pick.sampleTracking ? "Your samples are on the way." : "Dream Spirits is preparing your sample shipment."
+            ),
+            pick.sampleTracking
+              ? el("div", { class: "text-sm text-ivory/70" }, [el("span", { class: "text-ivory/40" }, "Tracking: "), pick.sampleTracking])
+              : el("div", { class: "text-sm text-ivory/40" }, "Tracking info will appear here once it ships."),
+          ]),
+        ])
+      );
+
+      if (pick.finalSampleStatus === "approved") {
+        panels.push(
+          card([
+            el("div", { class: "p-6" }, [
+              ...panelHeading("Selection Approved", "Dream Spirits will begin label creation shortly. Your confirmed samples:"),
+              el(
+                "ul",
+                { class: "space-y-1" },
+                pick.finalSampleBarrelIds.map((id) => {
+                  const b = getBarrel(id);
+                  return el("li", { class: "text-sm text-ivory/60" }, b ? b.sku : "Barrel unavailable");
+                })
+              ),
+            ]),
+          ])
+        );
+      } else if (pick.finalSampleStatus === "submitted") {
+        panels.push(
+          card([
+            el("div", { class: "p-6" }, [
+              ...panelHeading("Waiting on approval", "Dream Spirits is reviewing your sample selection:"),
+              el(
+                "ul",
+                { class: "space-y-1" },
+                pick.finalSampleBarrelIds.map((id) => {
+                  const b = getBarrel(id);
+                  return el("li", { class: "text-sm text-ivory/60" }, b ? b.sku : "Barrel unavailable");
+                })
+              ),
+            ]),
+          ])
+        );
+      } else {
+        const shippedBarrels = getState().barrels.filter((b) => pick.sampleBarrelIds.includes(b.id));
+        const finalSelected = new Set(pick.sampleBarrelIds);
+        panels.push(
+          card([
+            el("div", { class: "p-6" }, [
+              ...panelHeading("Confirm Your Selection", "Which of your shipped samples would you like to move forward with? Choose up to 5."),
+              renderSampleSelector({ barrels: shippedBarrels, selected: finalSelected, lockedId: pick.barrelId }),
+              el("div", { class: "pt-4" }, [
+                button("Submit Selection", {
+                  variant: "gold",
+                  onClick: () => {
+                    submitFinalSampleSelections(pick.id, Array.from(finalSelected));
+                    refresh();
+                  },
+                }),
+              ]),
+            ]),
+          ])
+        );
+      }
+    }
+  }
+
+  // Phase 4: label creation — customer uploads logo
+  if (pick.phase === 4 || (pick.phase >= 5 && pick.logo)) {
     if (!pick.logo && role === "customer") {
       panels.push(
         card([
@@ -201,8 +349,8 @@ function actionPanel(pick, barrel, role, refresh) {
     }
   }
 
-  // Phase 4: bottling — staff updates status
-  if (pick.phase === 4) {
+  // Phase 5: bottling — staff updates status
+  if (pick.phase === 5) {
     if (role === "staff") {
       let statusVal = pick.bottling.status;
       let countVal = pick.bottling.bottleCount ?? "";
@@ -262,8 +410,8 @@ function actionPanel(pick, barrel, role, refresh) {
     }
   }
 
-  // Phase 5: payment & fulfillment — staff marks listing complete
-  if (pick.phase === 5) {
+  // Phase 6: payment & fulfillment — staff marks listing complete
+  if (pick.phase === 6) {
     if (role === "staff") {
       panels.push(
         card([
@@ -292,7 +440,7 @@ function actionPanel(pick, barrel, role, refresh) {
     }
   }
 
-  if (pick.phase === 6) {
+  if (pick.phase === 7) {
     panels.push(
       card([
         el("div", { class: "p-6 flex items-center gap-3" }, [badge("Complete", "green"), el("span", { class: "text-sm text-ivory/60" }, "This barrel pick is complete.")]),
