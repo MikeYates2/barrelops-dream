@@ -9,7 +9,7 @@ import {
   markListingComplete,
   PHASES,
 } from "../store.js";
-import { el, card, button, badge, fmtDate, fmtMoney, field, selectInput, textInput } from "../ui.js";
+import { el, card, button, badge, fmtDate, fmtStayWindow, fmtMoney, field, selectInput, textInput } from "../ui.js";
 
 function phaseTracker(currentPhase) {
   return el(
@@ -69,6 +69,9 @@ function summaryCard(pick, barrel) {
       el("div", {}, [
         el("div", { class: "text-[10px] font-semibold text-gold/70 uppercase tracking-[0.2em] mb-1.5" }, "Pick Method"),
         badge(pick.pickMethod === "2B_in_person" ? "In-Person Pick" : "Ship Samples", "gold"),
+        pick.pickMethod === "2B_in_person" && pick.houseRulesAcknowledged
+          ? el("div", { class: "text-xs text-ivory/35 mt-2" }, "✓ Acknowledged $5,000 minimum-barrel policy")
+          : null,
       ]),
       pick.shippingAddress
         ? el("div", {}, [
@@ -114,12 +117,12 @@ function actionPanel(pick, barrel, role, refresh) {
       panels.push(
         card([
           el("div", { class: "p-6" }, [
-            ...panelHeading("Approve a Pick Date", "The customer requested the following dates. Approve one to confirm the visit."),
+            ...panelHeading("Approve a Pick Date", "The customer requested the following 2-night stay windows. Approve one to confirm the visit."),
             el(
               "div",
               { class: "flex flex-wrap gap-2" },
               pick.requestedDates.map((d) =>
-                button(fmtDate(d), {
+                button(fmtStayWindow(d), {
                   variant: "secondary",
                   onClick: () => {
                     approveDate(pick.id, d);
@@ -135,8 +138,8 @@ function actionPanel(pick, barrel, role, refresh) {
       panels.push(
         card([
           el("div", { class: "p-6" }, [
-            ...panelHeading("Waiting on date approval", "Dream Spirits staff will confirm one of your requested dates:"),
-            el("div", { class: "flex flex-wrap gap-2 mt-1" }, pick.requestedDates.map((d) => badge(fmtDate(d), "neutral"))),
+            ...panelHeading("Waiting on date approval", "Dream Spirits staff will confirm one of your requested stay windows:"),
+            el("div", { class: "flex flex-wrap gap-2 mt-1" }, pick.requestedDates.map((d) => badge(fmtStayWindow(d), "neutral"))),
           ]),
         ])
       );
@@ -148,7 +151,7 @@ function actionPanel(pick, barrel, role, refresh) {
       card([
         el("div", { class: "p-6 flex items-center gap-3" }, [
           badge("Date Confirmed", "green"),
-          el("span", { class: "text-sm text-ivory/60" }, `Visit confirmed for ${fmtDate(pick.approvedDate)}.`),
+          el("span", { class: "text-sm text-ivory/60" }, `Visit confirmed: ${fmtStayWindow(pick.approvedDate)}.`),
         ]),
       ])
     );

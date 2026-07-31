@@ -5,11 +5,12 @@ import {
   requestDates,
   setShippingAddress,
   setSampleSelections,
+  acknowledgeHouseRules,
   getState,
   setCustomerEmail,
   RETAILER_STATES,
 } from "../store.js";
-import { el, card, button, field, textInput, selectInput } from "../ui.js";
+import { el, card, button, field, textInput, selectInput, fmtStayWindow } from "../ui.js";
 import { renderCalendar } from "../components/calendar.js";
 import { renderSampleSelector } from "../components/sampleSelector.js";
 import { navigate } from "../router.js";
@@ -40,6 +41,7 @@ export function renderPickWizard({ barrelId }) {
   // internal state agree even if the user never touches the dropdown.
   let method = "2A_ship_samples";
   const selectedDates = new Set();
+  let houseRulesAcknowledged = false;
   const shipping = { street: "", city: "", state: "", zip: "" };
   // The barrel this pick started from is always included in the sample
   // shipment — it's the reason the customer is here.
@@ -159,18 +161,56 @@ export function renderPickWizard({ barrelId }) {
       { value: "2B_in_person", label: "In-Person Pick" },
     ];
 
+    // Its own local redraw (like calendar.js/sampleSelector.js) so toggling a
+    // date doesn't have to rebuild the whole step and lose the calendar's
+    // own month-navigation state.
+    const stayWindowSummary = el("ul", { class: "mt-4 space-y-1" });
+    function refreshStayWindowSummary() {
+      stayWindowSummary.replaceChildren(
+        ...Array.from(selectedDates).map((iso) => el("li", { class: "text-sm text-ivory/60" }, fmtStayWindow(iso)))
+      );
+    }
+    refreshStayWindowSummary();
+
     const calendarBlock =
       method === "2B_in_person"
         ? el("div", { class: "mt-6 pt-6 border-t border-white/10" }, [
-            el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Select your preferred date(s)"),
-            el("p", { class: "text-xs text-ivory/35 mb-4" }, "Pick up to 3 dates. Dream Spirits staff will confirm one."),
+            el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Select your arrival date(s)"),
+            el(
+              "p",
+              { class: "text-xs text-ivory/35 mb-4" },
+              "Each visit is a 2-night stay. Pick up to 3 arrival dates and Dream Spirits staff will confirm one."
+            ),
             renderCalendar({
               selected: selectedDates,
               onToggle: (iso) => {
                 if (selectedDates.has(iso)) selectedDates.delete(iso);
                 else if (selectedDates.size < 3) selectedDates.add(iso);
+                refreshStayWindowSummary();
               },
             }),
+            stayWindowSummary,
+          ])
+        : null;
+
+    const houseRulesBlock =
+      method === "2B_in_person"
+        ? el("div", { class: "mt-6 pt-6 border-t border-white/10" }, [
+            el("label", { class: "flex items-start gap-3 cursor-pointer" }, [
+              el("input", {
+                type: "checkbox",
+                checked: houseRulesAcknowledged,
+                class: "mt-0.5 w-4 h-4 rounded border-white/30 bg-white/[0.04] accent-gold-light shrink-0",
+                onchange: (e) => {
+                  houseRulesAcknowledged = e.target.checked;
+                },
+              }),
+              el(
+                "span",
+                { class: "text-sm text-ivory/60 leading-relaxed" },
+                "I understand that by staying at the Dream Spirits property, I will be required to select a minimum of 1 barrel per visit otherwise, I will owe $5,000 for the trip."
+              ),
+            ]),
           ])
         : null;
 
@@ -220,6 +260,7 @@ export function renderPickWizard({ barrelId }) {
           })
         ),
         calendarBlock,
+        houseRulesBlock,
         shippingBlock,
         sampleSelectorBlock,
         el("div", { class: "flex justify-between pt-8" }, [
@@ -235,6 +276,10 @@ export function renderPickWizard({ barrelId }) {
                 showError("Please select at least one preferred date.");
                 return;
               }
+              if (method === "2B_in_person" && !houseRulesAcknowledged) {
+                showError("Please acknowledge the barrel minimum policy to continue.");
+                return;
+              }
               if (method === "2A_ship_samples" && (!shipping.street.trim() || !shipping.city.trim() || !shipping.state.trim() || !shipping.zip.trim())) {
                 showError("Please fill in your full shipping address.");
                 return;
@@ -243,7 +288,10 @@ export function renderPickWizard({ barrelId }) {
               setCustomerEmail(contact.email.trim());
               const pick = createPick({ barrelId, contact: { ...contact, email: contact.email.trim() } });
               setPickMethod(pick.id, method);
-              if (method === "2B_in_person") requestDates(pick.id, Array.from(selectedDates));
+              if (method === "2B_in_person") {
+                requestDates(pick.id, Array.from(selectedDates));
+                acknowledgeHouseRules(pick.id);
+              }
               if (method === "2A_ship_samples") {
                 setShippingAddress(pick.id, {
                   street: shipping.street.trim(),

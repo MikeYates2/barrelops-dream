@@ -51,6 +51,16 @@ export function fmtDate(d) {
   return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
+// An in-person pick date is the arrival date of a fixed 2-night stay.
+// Formats it as a window, e.g. "Jul 28, 2026 – Jul 30, 2026 · 2 nights".
+export function fmtStayWindow(startIso) {
+  if (!startIso) return "—";
+  const [y, m, d] = startIso.split("-").map(Number);
+  const end = new Date(y, m - 1, d + 2);
+  const endIso = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+  return `${fmtDate(startIso)} – ${fmtDate(endIso)} · 2 nights`;
+}
+
 // ---- Luxury visual language: glass surfaces, gold accents, serif display type ----
 
 // Status is conveyed by fill weight and contrast more than hue: red is

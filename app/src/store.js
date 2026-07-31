@@ -241,6 +241,7 @@ export function createPick({ barrelId, contact }) {
     requestedDates: [],
     approvedDate: null,
     dateStatus: null, // 'pending' | 'approved'
+    houseRulesAcknowledged: false, // in-person only: $5,000 no-barrel-minimum policy
     phase: 1,
     logo: null,
     bottling: { status: "not_started", bottleCount: null, notes: "", updatedAt: null },
@@ -295,6 +296,13 @@ export function requestDates(id, dates) {
   if (!p) return;
   p.requestedDates = dates;
   p.dateStatus = "pending";
+  notify();
+}
+
+export function acknowledgeHouseRules(id) {
+  const p = getPick(id);
+  if (!p) return;
+  p.houseRulesAcknowledged = true;
   notify();
 }
 
