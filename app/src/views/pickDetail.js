@@ -11,6 +11,9 @@ import {
   submitFinalSampleSelections,
   approveFinalSampleSelections,
   advanceToLabelCreation,
+  advanceToBottling,
+  goToPreviousPhase,
+  minPickPhase,
   PHASES,
 } from "../store.js";
 import { el, card, button, badge, fmtDate, fmtStayWindow, fmtMoney, field, selectInput, textInput } from "../ui.js";
@@ -253,15 +256,29 @@ function actionPanel(pick, barrel, role, refresh) {
         panels.push(
           card([
             el("div", { class: "p-6" }, [
-              ...panelHeading("Selection Approved", "Dream Spirits will begin label creation shortly. Your confirmed samples:"),
+              ...panelHeading(
+                "Selection Approved",
+                pick.sampleTracking
+                  ? "You're ready to move forward. Your confirmed samples:"
+                  : "Dream Spirits will begin label creation shortly. Your confirmed samples:"
+              ),
               el(
                 "ul",
-                { class: "space-y-1" },
+                { class: "space-y-1 mb-4" },
                 pick.finalSampleBarrelIds.map((id) => {
                   const b = getBarrel(id);
                   return el("li", { class: "text-sm text-ivory/60" }, b ? b.sku : "Barrel unavailable");
                 })
               ),
+              pick.sampleTracking
+                ? button("Move to Label Creation", {
+                    variant: "gold",
+                    onClick: () => {
+                      advanceToLabelCreation(pick.id);
+                      refresh();
+                    },
+                  })
+                : null,
             ]),
           ])
         );
@@ -311,21 +328,26 @@ function actionPanel(pick, barrel, role, refresh) {
       panels.push(
         card([
           el("div", { class: "p-6" }, [
-            ...panelHeading("Upload Your Logo", "Upload a logo (JPG or PNG) for your custom label."),
+            ...panelHeading("Upload Your Logo", "Upload a logo (PNG, JPG, SVG, or PDF) for your custom label."),
             el("input", {
               type: "file",
-              accept: "image/png,image/jpeg",
+              accept: "image/png,image/jpeg,image/svg+xml,application/pdf",
               class: "text-sm text-ivory/60 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-gold/15 file:text-gold-light file:text-xs file:font-medium hover:file:bg-gold/25 file:cursor-pointer cursor-pointer",
               onchange: (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
+                const allowedTypes = ["image/png", "image/jpeg", "image/svg+xml", "application/pdf"];
+                if (!allowedTypes.includes(file.type)) {
+                  alert("Please upload a PNG, JPG, SVG, or PDF file.");
+                  return;
+                }
                 if (file.size > 5 * 1024 * 1024) {
                   alert("Logo file must be under 5MB.");
                   return;
                 }
                 const reader = new FileReader();
                 reader.onload = () => {
-                  uploadLogo(pick.id, { fileName: file.name, dataUrl: String(reader.result), uploadedAt: new Date().toISOString() });
+                  uploadLogo(pick.id, { fileName: file.name, fileType: file.type, dataUrl: String(reader.result), uploadedAt: new Date().toISOString() });
                   refresh();
                 };
                 reader.readAsDataURL(file);
@@ -341,8 +363,30 @@ function actionPanel(pick, barrel, role, refresh) {
         card([
           el("div", { class: "p-6" }, [
             el("h3", { class: "font-serif text-xl text-ivory mb-3" }, "Label Logo"),
-            el("img", { src: pick.logo.dataUrl, class: "max-h-32 rounded-lg border border-white/10 mb-2 bg-white/5 p-2" }),
-            el("div", { class: "text-xs text-ivory/35" }, pick.logo.fileName),
+            pick.logo.fileType === "application/pdf"
+              ? el(
+                  "a",
+                  {
+                    href: pick.logo.dataUrl,
+                    target: "_blank",
+                    class: "flex items-center gap-3 max-w-xs rounded-lg border border-white/10 mb-2 bg-white/5 p-4 hover:border-gold/40 transition-colors",
+                  },
+                  [
+                    el("span", { class: "text-2xl" }, "📄"),
+                    el("span", { class: "text-sm text-gold-light underline underline-offset-2" }, "View PDF"),
+                  ]
+                )
+              : el("img", { src: pick.logo.dataUrl, class: "max-h-32 rounded-lg border border-white/10 mb-2 bg-white/5 p-2" }),
+            el("div", { class: "text-xs text-ivory/35 mb-4" }, pick.logo.fileName),
+            pick.phase === 4 && role === "staff"
+              ? button("Advance to Bottling", {
+                  variant: "gold",
+                  onClick: () => {
+                    advanceToBottling(pick.id);
+                    refresh();
+                  },
+                })
+              : null,
           ]),
         ])
       );
@@ -462,15 +506,32 @@ export function renderPickDetail({ id }) {
       return;
     }
     const barrel = getBarrel(pick.barrelId);
+    const canGoBack = pick.phase > minPickPhase(pick);
     wrap.replaceChildren(
-      el("a", { href: state.currentRole === "staff" ? "#/dashboard" : "#/my-picks", class: "text-xs text-gold/70 hover:text-gold transition-colors" }, "← Back"),
-      el("h1", { class: "font-serif text-4xl text-ivory mt-3 mb-1" }, `Pick ${pick.id.slice(-6).toUpperCase()}`),
-      el("p", { class: "text-sm text-ivory/35 mb-8" }, `Created ${fmtDate(pick.createdAt)}`),
-      phaseTracker(pick.phase),
-      el("div", { class: "grid grid-cols-3 gap-6" }, [
-        el("div", { class: "col-span-2" }, actionPanel(pick, barrel, state.currentRole, refresh)),
-        el("div", { class: "col-span-1" }, summaryCard(pick, barrel)),
-      ])
+      ...[
+        el("a", { href: state.currentRole === "staff" ? "#/dashboard" : "#/my-picks", class: "text-xs text-gold/70 hover:text-gold transition-colors" }, "← Back"),
+        el("h1", { class: "font-serif text-4xl text-ivory mt-3 mb-1" }, `Pick ${pick.id.slice(-6).toUpperCase()}`),
+        el("p", { class: "text-sm text-ivory/35 mb-8" }, `Created ${fmtDate(pick.createdAt)}`),
+        phaseTracker(pick.phase),
+        canGoBack
+          ? el(
+              "div",
+              { class: "flex justify-end -mt-6 mb-6" },
+              button("← Back to previous step", {
+                variant: "ghost",
+                extraClass: "text-xs",
+                onClick: () => {
+                  goToPreviousPhase(pick.id);
+                  refresh();
+                },
+              })
+            )
+          : null,
+        el("div", { class: "grid grid-cols-3 gap-6" }, [
+          el("div", { class: "col-span-2" }, actionPanel(pick, barrel, state.currentRole, refresh)),
+          el("div", { class: "col-span-1" }, summaryCard(pick, barrel)),
+        ]),
+      ].filter(Boolean)
     );
   }
 

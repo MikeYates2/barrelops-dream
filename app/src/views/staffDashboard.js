@@ -1,9 +1,12 @@
-import { getState, getBarrel, PHASES } from "../store.js";
-import { el, card, badge, fmtDate } from "../ui.js";
+import { getState, getBarrel, PHASES, returnPickToInventory } from "../store.js";
+import { el, card, badge, button, fmtDate } from "../ui.js";
 
 export function renderStaffDashboard() {
   const state = getState();
   let phaseFilter = "all";
+  // Id of the pick currently showing its inline "are you sure" prompt in
+  // place of the Return to Inventory button — at most one at a time.
+  let confirmingId = null;
 
   const wrap = el("div", { class: "px-8 py-16 max-w-6xl mx-auto" });
 
@@ -82,7 +85,7 @@ export function renderStaffDashboard() {
         )
       : null;
 
-    const cols = ["Barrel", "Customer", "Type", "Method", "Phase", "Created", ""];
+    const cols = ["Barrel", "Customer", "Type", "Method", "Phase", "Created", "", ""];
 
     const table = card(
       [
@@ -112,6 +115,39 @@ export function renderStaffDashboard() {
                       el("td", { class: "px-4 py-3" }, badge(phaseInfo ? phaseInfo.label : "—", p.phase === 7 ? "green" : "amber")),
                       el("td", { class: "px-4 py-3 text-ivory/40 whitespace-nowrap" }, fmtDate(p.createdAt)),
                       el("td", { class: "px-4 py-3 text-right" }, el("a", { href: `#/pick/${p.id}`, class: "text-xs text-gold/80 hover:text-gold underline underline-offset-2" }, "View")),
+                      el(
+                        "td",
+                        { class: "px-4 py-3 text-right whitespace-nowrap" },
+                        confirmingId === p.id
+                          ? el("div", { class: "flex items-center justify-end gap-2" }, [
+                              el("span", { class: "text-xs text-ivory/50" }, "Delete pick?"),
+                              button("Confirm", {
+                                variant: "danger",
+                                extraClass: "!px-3 !py-1.5 !text-xs",
+                                onClick: () => {
+                                  returnPickToInventory(p.id);
+                                  confirmingId = null;
+                                  draw();
+                                },
+                              }),
+                              button("Cancel", {
+                                variant: "ghost",
+                                extraClass: "!px-3 !py-1.5 !text-xs",
+                                onClick: () => {
+                                  confirmingId = null;
+                                  draw();
+                                },
+                              }),
+                            ])
+                          : button("Return to Inventory", {
+                              variant: "danger",
+                              extraClass: "!px-3 !py-1.5 !text-xs",
+                              onClick: () => {
+                                confirmingId = p.id;
+                                draw();
+                              },
+                            })
+                      ),
                     ]);
                   })
                 : el("tr", {}, el("td", { class: "px-4 py-10 text-center text-ivory/30", colSpan: cols.length }, "No picks in this stage."))

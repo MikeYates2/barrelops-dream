@@ -1,13 +1,22 @@
-import { getState, requestMembership } from "../store.js";
-import { el, badge, button, fmtMoney, card, sectionHeading, textInput } from "../ui.js";
+import { getState, requestMembership, updateBarrel } from "../store.js";
+import { el, badge, button, fmtMoney, card, sectionHeading, textInput, selectInput } from "../ui.js";
 import { navigate } from "../router.js";
 
 const STATUS_TONE = {
   available: ["Available", "green"],
   in_bottling: ["In Bottling", "amber"],
   not_available: ["Not Available", "red"],
+  pending: ["Pending", "amber"],
   sold: ["Reserved", "neutral"],
 };
+
+// The manual statuses staff can set from the inventory table — distinct from
+// in_bottling/sold, which are driven automatically by a barrel's active pick.
+const EDITABLE_STATUSES = [
+  { value: "available", label: "Available" },
+  { value: "not_available", label: "Not Available" },
+  { value: "pending", label: "Pending" },
+];
 
 // There's no structured "type" field in the real inventory data (just a
 // SKU name), so card art is differentiated by a light keyword scan of the
@@ -142,7 +151,7 @@ function barrelCard(b, role, groupType) {
   ]);
 }
 
-function darkTable(barrels) {
+function darkTable(barrels, onStatusChange) {
   const cols = ["SKU", "Distilled When", "Retail MSRP", "Private Group", "Status", "Notes"];
   return card(
     [
@@ -161,13 +170,30 @@ function darkTable(barrels) {
             "tbody",
             {},
             barrels.map((b) => {
-              const [statusLabel, statusTone] = STATUS_TONE[b.status] || STATUS_TONE.available;
+              // A status the dropdown doesn't offer (in_bottling/sold, set by
+              // the pick workflow) still needs to display correctly, so the
+              // select's own option list always includes the current value.
+              const options = EDITABLE_STATUSES.some((o) => o.value === b.status)
+                ? EDITABLE_STATUSES
+                : [...EDITABLE_STATUSES, { value: b.status, label: (STATUS_TONE[b.status] || STATUS_TONE.available)[0] }];
               return el("tr", { class: "border-b border-white/5 hover:bg-white/[0.03]" }, [
                 el("td", { class: "px-4 py-3 font-medium text-ivory max-w-xs" }, b.sku),
                 el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, b.distilledWhen || "—"),
                 el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, fmtMoney(b.retailMsrp)),
                 el("td", { class: "px-4 py-3 text-gold-light font-medium whitespace-nowrap" }, fmtMoney(b.privateGroupPricing)),
-                el("td", { class: "px-4 py-3" }, badge(statusLabel, statusTone)),
+                el(
+                  "td",
+                  { class: "px-4 py-3" },
+                  selectInput(options, {
+                    value: b.status,
+                    class:
+                      "rounded-lg bg-white/[0.04] border border-white/15 px-2.5 py-1.5 text-xs text-ivory focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/50 transition-colors [color-scheme:dark]",
+                    onchange: (e) => {
+                      updateBarrel(b.id, { status: e.target.value });
+                      onStatusChange();
+                    },
+                  })
+                ),
                 el("td", { class: "px-4 py-3 text-ivory/40 text-xs max-w-xs truncate" }, b.notes || "—"),
               ]);
             })
@@ -283,10 +309,16 @@ function membershipSection() {
   return el("section", { class: "max-w-4xl mx-auto px-8 pb-28", id: "membership" }, [panel]);
 }
 
+// Hoisted above renderMarketplace() so they survive the full-route redraw
+// that store.js's notify() triggers on every mutation (see main.js's global
+// subscribe) — including the status dropdown in the table below, which
+// would otherwise snap staff back to the Showcase view and clear their
+// search on every single status change.
+let query = "";
+let viewMode = "grid"; // staff can toggle to 'table'
+
 export function renderMarketplace() {
   const state = getState();
-  let query = "";
-  let viewMode = "grid"; // staff can toggle to 'table'
 
   // Only the results grid/table and the count footnote are rebuilt when the
   // search query or view mode change. The search input, toggle buttons, and
@@ -305,7 +337,7 @@ export function renderMarketplace() {
 
     const results =
       viewMode === "table" && state.currentRole === "staff"
-        ? darkTable(barrels)
+        ? darkTable(barrels, renderResults)
         : barrels.length
         ? el(
             "div",
@@ -336,6 +368,7 @@ export function renderMarketplace() {
   const searchInput = el("input", {
     type: "search",
     placeholder: "Search by SKU, distilled date, or notes...",
+    value: query,
     class:
       "w-full rounded-full glass border border-white/15 px-5 py-3 text-sm text-ivory placeholder:text-ivory/30 focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/50",
     oninput: (e) => {

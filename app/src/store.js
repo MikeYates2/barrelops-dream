@@ -356,6 +356,13 @@ export function uploadLogo(id, logo) {
   notify();
 }
 
+export function advanceToBottling(id) {
+  const p = getPick(id);
+  if (!p) return;
+  if (p.phase < 5) p.phase = 5;
+  notify();
+}
+
 export function updateBottling(id, patch) {
   const p = getPick(id);
   if (!p) return;
@@ -382,9 +389,46 @@ export function markListingComplete(id) {
   notify();
 }
 
+// The earliest phase a pick can be sent back to — Sample Fulfillment doesn't
+// exist for in-person visits, and Intake has no editable screen in the pick
+// detail view, so each path's own starting phase is the floor.
+export function minPickPhase(pick) {
+  return pick.pickMethod === "2A_ship_samples" ? 3 : 2;
+}
+
+export function goToPreviousPhase(id) {
+  const p = getPick(id);
+  if (!p) return;
+  if (p.phase <= minPickPhase(p)) return;
+  if (p.phase === 4 && p.pickMethod === "2B_in_person") {
+    // Sample Fulfillment doesn't apply here — reopen date approval instead.
+    p.phase = 2;
+    p.dateStatus = "pending";
+  } else if (p.phase === 7) {
+    p.phase = 6;
+    p.fulfillment.listingComplete = false;
+    const barrel = getBarrel(p.barrelId);
+    if (barrel) barrel.status = "in_bottling";
+  } else {
+    p.phase -= 1;
+  }
+  notify();
+}
+
 export function picksForCustomer(email) {
   if (!email) return [];
   return state.picks.filter((p) => p.contact.email.toLowerCase() === email.toLowerCase());
+}
+
+// Cancels a pick entirely (removed from both the staff dashboard and the
+// customer's My Picks) and frees its barrel back up for a new pick.
+export function returnPickToInventory(id) {
+  const p = getPick(id);
+  if (!p) return;
+  const barrel = getBarrel(p.barrelId);
+  if (barrel) barrel.status = "available";
+  state.picks = state.picks.filter((x) => x.id !== id);
+  notify();
 }
 
 // ---- Membership CTA capture (demo — stored locally, visible to staff) ----
