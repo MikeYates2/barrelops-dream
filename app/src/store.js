@@ -107,6 +107,7 @@ function seedState() {
     barrels: seedBarrels(),
     picks: [],
     membershipRequests: [],
+    customers: [], // saved profiles, keyed by lowercase email — see getCustomerProfile()
   };
 }
 
@@ -121,6 +122,12 @@ function load() {
     if (parsed.staffName === undefined) parsed.staffName = null;
     if (parsed.customerGroupType === undefined) parsed.customerGroupType = null;
     if (parsed.customerRetailerState === undefined) parsed.customerRetailerState = null;
+    if (!parsed.customers) parsed.customers = [];
+    // Profiles created before the approval gate existed are grandfathered
+    // in as approved — they were already active users of the app.
+    parsed.customers.forEach((c) => {
+      if (c.approvalStatus === undefined) c.approvalStatus = "approved";
+    });
     return parsed;
   } catch (e) {
     console.warn("Failed to load state, reseeding", e);
@@ -162,14 +169,128 @@ export function resetDemoData() {
 // a determined attacker. Real staff auth needs a backend.
 const STAFF_ACCESS_CODE = "DREAMSTAFF";
 
-export function loginAsCustomer({ name, email, groupType, retailerState }) {
+// A customer's saved profile — looked up by email so a returning customer
+// doesn't have to retype their details on a later login or pick. Not a real
+// account system (no password — see the STAFF_ACCESS_CODE note above for
+// why this app doesn't attempt real auth): just persistence keyed by email.
+export function getCustomerProfile(email) {
+  if (!email) return null;
+  return state.customers.find((c) => c.email === email.trim().toLowerCase()) || null;
+}
+
+// Merges non-empty fields into a customer's saved profile, creating it if
+// this is the first time we've seen that email. Blank/undefined fields in
+// `patch` are ignored so a partial update (e.g. login only knows name and
+// group type) never clobbers details learned elsewhere (e.g. phone and
+// location, only captured once a pick is submitted).
+export function upsertCustomerProfile(patch) {
+  if (!patch.email) return null;
+  const email = patch.email.trim().toLowerCase();
+  let profile = state.customers.find((c) => c.email === email);
+  if (!profile) {
+    profile = { email, createdAt: new Date().toISOString() };
+    state.customers.push(profile);
+  }
+  Object.entries(patch).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") profile[key] = value;
+  });
+  profile.email = email;
+  profile.updatedAt = new Date().toISOString();
+  return profile;
+}
+
+// Creates a brand-new customer account. Fails if the email is already
+// registered (they should sign in instead). New accounts start 'pending'
+// and can't sign in until Dream Staff approves them — see approveCustomerProfile.
+export function signUpCustomer({ name, email, password, groupType, retailerState }) {
+  const normalizedEmail = (email || "").trim().toLowerCase();
+  if (!normalizedEmail || !password) return { ok: false, error: "Email and password are required." };
+  if (getCustomerProfile(normalizedEmail)) {
+    return { ok: false, error: "An account with that email already exists. Please sign in instead." };
+  }
+  upsertCustomerProfile({
+    name,
+    email: normalizedEmail,
+    password,
+    groupType: groupType || "private_group",
+    retailerState: groupType === "retailer" ? retailerState || null : null,
+    approvalStatus: "pending",
+  });
+  notify();
+  return { ok: true, pending: true };
+}
+
+// Signs an existing customer in by email + password. Distinct failure modes
+// so the login screen can react appropriately: wrong/missing password,
+// no password ever set (legacy or newly-approved account — needs setup),
+// or a real account that's still awaiting staff approval.
+export function loginAsCustomer({ email, password }) {
+  const profile = getCustomerProfile(email);
+  if (!profile) {
+    return { ok: false, error: "No account found with that email. Please sign up." };
+  }
+  if (!profile.password) {
+    return { ok: false, needsPasswordSetup: true };
+  }
+  if (profile.password !== password) {
+    return { ok: false, error: "Incorrect password." };
+  }
+  if (profile.approvalStatus === "pending") {
+    return { ok: false, pending: true, error: "Your account is awaiting approval from Dream Spirits staff. We'll be in touch once it's ready." };
+  }
   state.currentRole = "customer";
-  state.customerName = name;
-  state.currentCustomerEmail = email;
-  state.customerGroupType = groupType || "private_group";
-  state.customerRetailerState = groupType === "retailer" ? retailerState || null : null;
+  state.customerName = profile.name;
+  state.currentCustomerEmail = profile.email;
+  state.customerGroupType = profile.groupType;
+  state.customerRetailerState = profile.groupType === "retailer" ? profile.retailerState || null : null;
   notify();
   return { ok: true };
+}
+
+// Sets or changes a customer's password — used both for a legacy/newly
+// approved account's first-time setup and for the My Account change-password
+// form. Not real security (see the STAFF_ACCESS_CODE note above): stored in
+// plain text alongside the rest of the demo profile data.
+export function setCustomerPassword(email, password) {
+  const profile = getCustomerProfile(email);
+  if (!profile) return { ok: false, error: "Account not found." };
+  if (!password) return { ok: false, error: "Please enter a password." };
+  profile.password = password;
+  profile.updatedAt = new Date().toISOString();
+  notify();
+  return { ok: true };
+}
+
+export function pendingCustomerProfiles() {
+  return state.customers.filter((c) => c.approvalStatus === "pending");
+}
+
+export function approveCustomerProfile(email) {
+  const profile = getCustomerProfile(email);
+  if (!profile) return;
+  profile.approvalStatus = "approved";
+  profile.updatedAt = new Date().toISOString();
+  notify();
+}
+
+// Used by the My Account screen to edit a profile directly (name, address,
+// customer status, licensing state). Unlike upsertCustomerProfile, this
+// assigns every key in `patch` as-is (including explicit nulls/empty
+// strings) so a deliberate edit — e.g. clearing an address field, or
+// switching off Retailer and nulling out the licensing state — actually
+// takes effect instead of being silently skipped.
+export function updateCustomerProfile(email, patch) {
+  const profile = getCustomerProfile(email);
+  if (!profile) return null;
+  Object.assign(profile, patch);
+  profile.updatedAt = new Date().toISOString();
+  if (state.currentCustomerEmail && state.currentCustomerEmail.toLowerCase() === profile.email) {
+    if (patch.name !== undefined) state.customerName = patch.name;
+    if (patch.groupType !== undefined) state.customerGroupType = patch.groupType;
+    if (patch.retailerState !== undefined) state.customerRetailerState = patch.groupType === "retailer" ? patch.retailerState : null;
+  }
+  notify();
+  return profile;
 }
 
 export function loginAsStaff({ name, accessCode }) {

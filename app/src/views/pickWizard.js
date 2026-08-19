@@ -8,6 +8,8 @@ import {
   acknowledgeHouseRules,
   getState,
   setCustomerEmail,
+  getCustomerProfile,
+  upsertCustomerProfile,
   RETAILER_STATES,
 } from "../store.js";
 import { el, card, button, field, textInput, selectInput, fmtStayWindow } from "../ui.js";
@@ -25,12 +27,15 @@ export function renderPickWizard({ barrelId }) {
   }
 
   const state = getState();
+  const profile = getCustomerProfile(state.currentCustomerEmail);
   let step = 1;
   const contact = {
     name: state.customerName || "",
     email: state.currentCustomerEmail || "",
-    phone: "",
-    location: "",
+    // Phone/location aren't captured at login — only ever learned from a
+    // past pick — so they can only come from the saved profile, not session.
+    phone: (profile && profile.phone) || "",
+    location: (profile && profile.location) || "",
     // Pre-filled from the account-level type set at login, so a returning
     // customer isn't asked the same question twice — still editable per
     // pick in case this particular order differs from their account.
@@ -42,7 +47,10 @@ export function renderPickWizard({ barrelId }) {
   let method = "2A_ship_samples";
   const selectedDates = new Set();
   let houseRulesAcknowledged = false;
-  const shipping = { street: "", city: "", state: "", zip: "" };
+  // A copy, not a reference — mutating this shouldn't touch the saved
+  // profile until the pick is actually submitted (see upsertCustomerProfile
+  // call below).
+  const shipping = { street: "", city: "", state: "", zip: "", ...(profile && profile.address) };
   // The barrel this pick started from is always included in the sample
   // shipment — it's the reason the customer is here.
   const sampleBarrelIds = new Set([barrelId]);
@@ -286,6 +294,18 @@ export function renderPickWizard({ barrelId }) {
               }
               errorBox.classList.add("hidden");
               setCustomerEmail(contact.email.trim());
+              upsertCustomerProfile({
+                email: contact.email.trim(),
+                name: contact.name.trim(),
+                phone: contact.phone.trim(),
+                location: contact.location.trim(),
+                groupType: contact.groupType,
+                retailerState: contact.groupType === "retailer" ? contact.retailerState : null,
+                address:
+                  method === "2A_ship_samples"
+                    ? { street: shipping.street.trim(), city: shipping.city.trim(), state: shipping.state.trim(), zip: shipping.zip.trim() }
+                    : undefined,
+              });
               const pick = createPick({ barrelId, contact: { ...contact, email: contact.email.trim() } });
               setPickMethod(pick.id, method);
               if (method === "2B_in_person") {

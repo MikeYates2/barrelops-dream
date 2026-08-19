@@ -9,6 +9,7 @@ import { renderInventoryUpload } from "./views/inventoryUpload.js";
 import { renderPickWizard } from "./views/pickWizard.js";
 import { renderPickDetail } from "./views/pickDetail.js";
 import { renderMyPicks } from "./views/myPicks.js";
+import { renderMyAccount } from "./views/myAccount.js";
 import { renderStaffDashboard } from "./views/staffDashboard.js";
 
 const appRoot = document.getElementById("app");
@@ -59,7 +60,8 @@ function shell(contentNode) {
           navLink("Upload Inventory", "/inventory/upload", "⇧"),
         ]
       : [];
-  const customerLinks = state.currentRole === "customer" ? [navLink("My Picks", "/my-picks", "◈")] : [];
+  const customerLinks =
+    state.currentRole === "customer" ? [navLink("My Picks", "/my-picks", "◈"), navLink("My Account", "/account", "☺")] : [];
 
   const sidebar = el(
     "aside",
@@ -164,6 +166,10 @@ route("/pick/:id", (params) => {
 route("/my-picks", () => {
   if (!requireRole(["customer"], () => navigate("/dashboard"))) return;
   draw(renderMyPicks());
+});
+route("/account", () => {
+  if (!requireRole(["customer"], () => navigate("/dashboard"))) return;
+  draw(renderMyAccount());
 });
 route("/dashboard", () => {
   if (!requireRole(["staff"], () => navigate("/"))) return;

@@ -1,4 +1,4 @@
-import { getState, getBarrel, PHASES, returnPickToInventory } from "../store.js";
+import { getState, getBarrel, PHASES, returnPickToInventory, pendingCustomerProfiles, approveCustomerProfile } from "../store.js";
 import { el, card, badge, button, fmtDate } from "../ui.js";
 
 export function renderStaffDashboard() {
@@ -18,6 +18,7 @@ export function renderStaffDashboard() {
 
     const needsAttention = state.picks.filter((p) => p.pickMethod === "2B_in_person" && p.dateStatus === "pending");
     const membershipRequests = state.membershipRequests || [];
+    const pendingProfiles = pendingCustomerProfiles();
 
     const filterBar = el(
       "div",
@@ -55,6 +56,40 @@ export function renderStaffDashboard() {
                     { href: `#/pick/${p.id}`, class: "text-xs text-gold/80 hover:text-gold underline underline-offset-2" },
                     `${p.contact.name} — ${p.requestedDates.length} date(s) requested`
                   )
+                )
+              ),
+            ]),
+          ],
+          "mb-4"
+        )
+      : null;
+
+    const pendingProfilesCard = pendingProfiles.length
+      ? card(
+          [
+            el("div", { class: "p-5" }, [
+              el("div", { class: "flex items-center gap-2 font-medium text-gold-light text-sm mb-3" }, [
+                el("span", {}, "☺"),
+                `${pendingProfiles.length} customer account(s) awaiting approval`,
+              ]),
+              el(
+                "div",
+                { class: "space-y-2" },
+                pendingProfiles.map((c) =>
+                  el("div", { class: "flex items-center justify-between gap-3 flex-wrap" }, [
+                    el("span", { class: "text-xs text-ivory/60" }, [
+                      el("span", { class: "text-ivory" }, c.name || "(no name)"),
+                      ` <${c.email}> · ${c.groupType === "retailer" ? "Retailer" : "Private Group"}`,
+                    ]),
+                    button("Approve", {
+                      variant: "secondary",
+                      extraClass: "!px-3 !py-1.5 !text-xs",
+                      onClick: () => {
+                        approveCustomerProfile(c.email);
+                        draw();
+                      },
+                    }),
+                  ])
                 )
               ),
             ]),
@@ -165,7 +200,7 @@ export function renderStaffDashboard() {
       // Node.replaceChildren() (unlike our el() helper) doesn't skip null
       // args — it stringifies them to the literal text "null" — so filter
       // out the panels that have nothing to show first.
-      ...[attentionCard, membershipCard, filterBar, table].filter(Boolean)
+      ...[pendingProfilesCard, attentionCard, membershipCard, filterBar, table].filter(Boolean)
     );
   }
 
