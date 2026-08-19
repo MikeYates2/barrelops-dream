@@ -12,7 +12,7 @@ import { navigate } from "../router.js";
 // signUpCustomer() calls notify(), which (per main.js's global
 // re-render-on-any-change) tears down and rebuilds this whole view
 // synchronously — orphaning the closure the submit handler is running in
-// before it can switch its own local customerMode to 'pending'. Hoisting the
+// before it can switch its own local state to 'pending'. Hoisting the
 // just-signed-up email to module scope lets the *fresh* render (what the
 // user actually sees) pick up the pending state immediately.
 let pendingSignupEmail = null;
@@ -21,59 +21,29 @@ export function renderLogin() {
   let activeTab = "customer"; // 'customer' | 'staff'
   const errorBox = el("div", { class: "hidden text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mb-5 w-full max-w-md" });
 
+  const justSignedUpEmail = pendingSignupEmail;
+  pendingSignupEmail = null;
+
+  // Explicit toggle the customer controls directly — not inferred from what
+  // they type. 'setPassword' and 'pending' are sub-states that only ever
+  // surface while signing in (a legacy/freshly-approved account with no
+  // password yet, or one still awaiting staff approval), discovered at
+  // submit time rather than chosen up front.
+  let customerIntent = "signin"; // 'signin' | 'signup'
+  let customerSubState = justSignedUpEmail ? "pending" : "normal"; // 'normal' | 'setPassword' | 'pending'
+  let recognizedName = "";
+
   // Hoisted above draw() so typed values survive a redraw triggered by
   // toggling "Retailer" (which needs to reveal the state field) — recreating
   // these inside draw() would wipe whatever the user had already typed.
-  const customerForm = { name: "", email: pendingSignupEmail || "", password: "", confirmPassword: "", groupType: "private_group", retailerState: "" };
+  const customerForm = { name: "", email: justSignedUpEmail || "", password: "", confirmPassword: "", groupType: "private_group", retailerState: "" };
   const staffForm = { name: "", accessCode: "" };
-
-  // Driven by looking up the typed email against saved profiles:
-  //  - 'signup'    — no account with that email yet, collect everything
-  //  - 'signin'    — account exists and already has a password
-  //  - 'setPassword' — account exists (legacy or freshly approved) but has
-  //                    never had a password set
-  //  - 'pending'   — account exists but is still awaiting staff approval
-  let customerMode = "signup";
-  let recognizedName = "";
-
-  if (pendingSignupEmail) {
-    const freshProfile = getCustomerProfile(pendingSignupEmail);
-    recognizedName = (freshProfile && freshProfile.name) || "";
-    customerMode = "pending";
-    pendingSignupEmail = null;
-  }
 
   const wrap = el("div", { class: "min-h-screen flex flex-col items-center justify-center px-6 py-16" });
 
   function showError(msg) {
     errorBox.textContent = msg;
     errorBox.classList.remove("hidden");
-  }
-
-  // Re-run whenever the email changes (on blur, and again at submit time in
-  // case Enter was pressed before the field ever blurred) so the mode never
-  // goes stale relative to what's actually typed.
-  function resolveCustomerMode() {
-    const profile = getCustomerProfile(customerForm.email);
-    if (!profile) {
-      customerMode = "signup";
-      recognizedName = "";
-      return;
-    }
-    recognizedName = profile.name || "";
-    if (profile.approvalStatus === "pending") {
-      customerMode = "pending";
-      return;
-    }
-    if (!profile.password) {
-      customerMode = "setPassword";
-      return;
-    }
-    customerMode = "signin";
-    // Nothing left to ask them for — pre-fill so a resubmit after a typo
-    // doesn't lose their group type.
-    customerForm.groupType = profile.groupType || customerForm.groupType;
-    customerForm.retailerState = profile.retailerState || customerForm.retailerState;
   }
 
   function draw() {
@@ -104,6 +74,42 @@ export function renderLogin() {
       }),
     ]);
 
+    const intentToggle = el("div", { class: "flex gap-1 p-1 rounded-full glass border border-white/10 mb-6" }, [
+      el("button", {
+        type: "button",
+        class: `flex-1 px-4 py-2 rounded-full text-sm tracking-wide transition-colors ${
+          customerIntent === "signin" ? "bg-gold text-noir font-semibold" : "text-ivory/50"
+        }`,
+        textContent: "Sign In",
+        onclick: () => {
+          customerIntent = "signin";
+          customerSubState = "normal";
+          draw();
+        },
+      }),
+      el("button", {
+        type: "button",
+        class: `flex-1 px-4 py-2 rounded-full text-sm tracking-wide transition-colors ${
+          customerIntent === "signup" ? "bg-gold text-noir font-semibold" : "text-ivory/50"
+        }`,
+        textContent: "Create Account",
+        onclick: () => {
+          customerIntent = "signup";
+          customerSubState = "normal";
+          draw();
+        },
+      }),
+    ]);
+
+    const duplicateAccountNotice =
+      customerIntent === "signup"
+        ? el(
+            "div",
+            { class: "text-xs text-ivory/60 bg-gold/5 border-l-2 border-gold/40 rounded-r-lg px-4 py-2.5 mb-5 leading-relaxed" },
+            "Groups or Stores only need one account. Multiple accounts from the same group or store will be rejected."
+          )
+        : null;
+
     const retailerStateField =
       customerForm.groupType === "retailer"
         ? field(
@@ -116,12 +122,8 @@ export function renderLogin() {
         : null;
 
     const emailHint =
-      customerMode === "signin"
-        ? `Welcome back${recognizedName ? `, ${recognizedName}` : ""} — enter your password to continue.`
-        : customerMode === "setPassword"
+      customerSubState === "setPassword"
         ? `Welcome back${recognizedName ? `, ${recognizedName}` : ""} — let's set a password for your account.`
-        : customerMode === "pending"
-        ? null // the pending state replaces the whole form below instead
         : null;
 
     const emailField = field(
@@ -129,34 +131,13 @@ export function renderLogin() {
       textInput({
         type: "email",
         value: customerForm.email,
-        oninput: (e) => {
-          customerForm.email = e.target.value;
-          // Stale until the next blur/submit — avoids flashing the wrong
-          // mode's fields while they're still mid-edit.
-          customerMode = "signup";
-        },
-        onblur: () => {
-          resolveCustomerMode();
-          draw();
-        },
+        oninput: (e) => (customerForm.email = e.target.value),
       }),
       emailHint
     );
 
     const passwordFields =
-      customerMode === "signin"
-        ? [
-            field(
-              "Password",
-              textInput({
-                type: "password",
-                autocomplete: "current-password",
-                value: customerForm.password,
-                oninput: (e) => (customerForm.password = e.target.value),
-              })
-            ),
-          ]
-        : customerMode === "setPassword"
+      customerSubState === "setPassword"
         ? [
             field(
               "Create a Password",
@@ -177,8 +158,19 @@ export function renderLogin() {
               })
             ),
           ]
-        : customerMode === "signup"
+        : customerIntent === "signin"
         ? [
+            field(
+              "Password",
+              textInput({
+                type: "password",
+                autocomplete: "current-password",
+                value: customerForm.password,
+                oninput: (e) => (customerForm.password = e.target.value),
+              })
+            ),
+          ]
+        : [
             field(
               "Password",
               textInput({
@@ -197,11 +189,12 @@ export function renderLogin() {
                 oninput: (e) => (customerForm.confirmPassword = e.target.value),
               })
             ),
-          ]
-        : [];
+          ];
+
+    const submitLabel = customerSubState === "setPassword" ? "Set Password & Continue" : customerIntent === "signin" ? "Sign In" : "Create Account";
 
     const customerFormBody =
-      customerMode === "pending"
+      customerSubState === "pending"
         ? el("div", { class: "space-y-4" }, [
             el(
               "p",
@@ -215,7 +208,7 @@ export function renderLogin() {
                 customerForm.email = "";
                 customerForm.password = "";
                 customerForm.confirmPassword = "";
-                customerMode = "signup";
+                customerSubState = "normal";
                 draw();
               },
             }),
@@ -226,38 +219,12 @@ export function renderLogin() {
               class: "space-y-5",
               onsubmit: (e) => {
                 e.preventDefault();
-                resolveCustomerMode();
-
                 if (!customerForm.email.trim()) {
                   showError("Please enter your email.");
                   return;
                 }
 
-                if (customerMode === "pending") {
-                  draw();
-                  return;
-                }
-
-                if (customerMode === "signin") {
-                  if (!customerForm.password) {
-                    showError("Please enter your password.");
-                    return;
-                  }
-                  const result = loginAsCustomer({ email: customerForm.email.trim(), password: customerForm.password });
-                  if (!result.ok) {
-                    if (result.pending || result.needsPasswordSetup) {
-                      resolveCustomerMode();
-                      draw();
-                      return;
-                    }
-                    showError(result.error);
-                    return;
-                  }
-                  navigate("/");
-                  return;
-                }
-
-                if (customerMode === "setPassword") {
+                if (customerSubState === "setPassword") {
                   if (!customerForm.password || customerForm.password.length < 4) {
                     showError("Please choose a password of at least 4 characters.");
                     return;
@@ -274,7 +241,33 @@ export function renderLogin() {
                   const result = loginAsCustomer({ email: customerForm.email.trim(), password: customerForm.password });
                   if (!result.ok) {
                     if (result.pending) {
-                      resolveCustomerMode();
+                      customerSubState = "pending";
+                      draw();
+                      return;
+                    }
+                    showError(result.error);
+                    return;
+                  }
+                  navigate("/");
+                  return;
+                }
+
+                if (customerIntent === "signin") {
+                  if (!customerForm.password) {
+                    showError("Please enter your password.");
+                    return;
+                  }
+                  const result = loginAsCustomer({ email: customerForm.email.trim(), password: customerForm.password });
+                  if (!result.ok) {
+                    if (result.needsPasswordSetup) {
+                      const profile = getCustomerProfile(customerForm.email);
+                      recognizedName = (profile && profile.name) || "";
+                      customerSubState = "setPassword";
+                      draw();
+                      return;
+                    }
+                    if (result.pending) {
+                      customerSubState = "pending";
                       draw();
                       return;
                     }
@@ -318,10 +311,14 @@ export function renderLogin() {
               },
             },
             [
+              intentToggle,
+              duplicateAccountNotice,
               emailField,
-              customerMode === "signup" ? field("Full Name", textInput({ type: "text", value: customerForm.name, oninput: (e) => (customerForm.name = e.target.value) })) : null,
+              customerIntent === "signup" && customerSubState !== "setPassword"
+                ? field("Full Name", textInput({ type: "text", value: customerForm.name, oninput: (e) => (customerForm.name = e.target.value) }))
+                : null,
               ...passwordFields,
-              customerMode === "signup"
+              customerIntent === "signup" && customerSubState !== "setPassword"
                 ? field(
                     "Private Group or Retailer",
                     selectInput(
@@ -339,11 +336,8 @@ export function renderLogin() {
                     )
                   )
                 : null,
-              customerMode === "signup" ? retailerStateField : null,
-              button(
-                customerMode === "signin" ? "Sign In" : customerMode === "setPassword" ? "Set Password & Continue" : "Create Account",
-                { variant: "gold", type: "submit", extraClass: "w-full mt-2" }
-              ),
+              customerIntent === "signup" && customerSubState !== "setPassword" ? retailerStateField : null,
+              button(submitLabel, { variant: "gold", type: "submit", extraClass: "w-full mt-2" }),
             ].filter(Boolean)
           );
 
@@ -351,11 +345,13 @@ export function renderLogin() {
       activeTab === "customer"
         ? card([
             el("div", { class: "p-8" }, [
-              el("h2", { class: "font-serif text-2xl text-ivory mb-1" }, customerMode === "pending" ? "Almost there." : "Welcome."),
+              el("h2", { class: "font-serif text-2xl text-ivory mb-1" }, customerSubState === "pending" ? "Almost there." : "Welcome."),
               el(
                 "p",
                 { class: "text-sm text-ivory/40 mb-6" },
-                customerMode === "pending" ? "One more step before you can sign in." : "Enter your details to browse the collection and track your picks."
+                customerSubState === "pending"
+                  ? "One more step before you can sign in."
+                  : "Sign in to track your picks, or create an account to get started."
               ),
               customerFormBody,
             ]),
