@@ -293,6 +293,19 @@ export function updateCustomerProfile(email, patch) {
   return profile;
 }
 
+// Gates the barrel-less "Pick In Person" / "Pick Samples" entry points —
+// both skip re-asking for contact details, so the profile has to already
+// carry everything a pick would otherwise collect up front.
+export function isCustomerProfileComplete(email) {
+  const profile = getCustomerProfile(email);
+  if (!profile) return false;
+  const address = profile.address;
+  const hasAddress = !!(address && address.street && address.city && address.state && address.zip);
+  if (!profile.name || !profile.phone || !hasAddress) return false;
+  if (profile.groupType === "retailer" && !profile.retailerState) return false;
+  return true;
+}
+
 export function loginAsStaff({ name, accessCode }) {
   if ((accessCode || "").trim().toUpperCase() !== STAFF_ACCESS_CODE) {
     return { ok: false, error: "Incorrect access code." };
@@ -431,12 +444,25 @@ export function acknowledgeHouseRules(id) {
   notify();
 }
 
+// A customer's saved brand logo is the one that goes on the bottle — once a
+// pick reaches Label Creation, apply it automatically instead of asking them
+// to upload the same file again. Never overwrites a logo the pick already
+// has (e.g. after going back and forward again through this phase).
+function applyProfileLogoIfAvailable(pick) {
+  if (pick.logo) return;
+  const profile = getCustomerProfile(pick.contact.email);
+  if (profile && profile.logo) {
+    pick.logo = profile.logo;
+  }
+}
+
 export function approveDate(id, date) {
   const p = getPick(id);
   if (!p) return;
   p.approvedDate = date;
   p.dateStatus = "approved";
   p.phase = 4; // in-person visits skip Sample Fulfillment, straight to Label Creation
+  applyProfileLogoIfAvailable(p);
   notify();
 }
 
@@ -466,6 +492,7 @@ export function advanceToLabelCreation(id) {
   const p = getPick(id);
   if (!p) return;
   p.phase = 4;
+  applyProfileLogoIfAvailable(p);
   notify();
 }
 

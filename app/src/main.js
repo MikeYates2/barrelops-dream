@@ -1,4 +1,4 @@
-import { getState, subscribe, logout } from "./store.js";
+import { getState, subscribe, logout, isCustomerProfileComplete } from "./store.js";
 import { el, mount, button, initScrollReveal } from "./ui.js";
 import { route, notFoundRoute, startRouter, navigate, currentRoutePath } from "./router.js";
 
@@ -28,6 +28,36 @@ function navLink(label, path, icon) {
     },
     [el("span", { class: "text-base leading-none opacity-80" }, icon), label]
   );
+}
+
+// Same look as navLink, but a <button> with an onClick instead of a plain
+// route link — used where a nav item needs to run a check (profile
+// completeness) before deciding where to send the customer.
+function navAction(label, icon, onClick) {
+  return el(
+    "button",
+    {
+      type: "button",
+      class:
+        "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm tracking-wide transition-all duration-300 text-ivory/50 hover:text-ivory hover:bg-white/[0.04] border border-transparent text-left",
+      onclick: onClick,
+    },
+    [el("span", { class: "text-base leading-none opacity-80" }, icon), label]
+  );
+}
+
+// Both "start a pick" entry points skip re-collecting contact info, so the
+// saved profile has to already have everything a pick needs. Gate here
+// rather than inside the wizard so the customer never even lands on a
+// half-usable form.
+function startPick(method) {
+  const email = getState().currentCustomerEmail;
+  if (!isCustomerProfileComplete(email)) {
+    alert("Please complete your profile before scheduling a pick.");
+    navigate("/account");
+    return;
+  }
+  navigate(method === "2B_in_person" ? "/pick/new/in-person" : "/pick/new/samples");
 }
 
 // Shows who's signed in and lets them sign out. Replaces the old open
@@ -61,7 +91,14 @@ function shell(contentNode) {
         ]
       : [];
   const customerLinks =
-    state.currentRole === "customer" ? [navLink("My Picks", "/my-picks", "◈"), navLink("My Account", "/account", "☺")] : [];
+    state.currentRole === "customer"
+      ? [
+          navAction("Pick In Person", "⌂", () => startPick("2B_in_person")),
+          navAction("Pick Samples", "▤", () => startPick("2A_ship_samples")),
+          navLink("My Picks", "/my-picks", "◈"),
+          navLink("My Account", "/account", "☺"),
+        ]
+      : [];
 
   const sidebar = el(
     "aside",
@@ -79,7 +116,7 @@ function shell(contentNode) {
         ]),
       ]),
       el("nav", { class: "flex-1 px-3 py-5 space-y-1 overflow-y-auto" }, [
-        navLink("Marketplace", "/", "◆"),
+        navLink("View Inventory", "/", "◆"),
         ...staffLinks,
         ...customerLinks,
       ]),
@@ -155,9 +192,13 @@ route("/inventory/upload", () => {
   if (!requireRole(["staff"], () => navigate("/"))) return;
   draw(renderInventoryUpload());
 });
-route("/pick/new/:barrelId", (params) => {
+route("/pick/new/in-person", () => {
   if (!requireRole(["customer"], () => navigate("/dashboard"))) return;
-  draw(renderPickWizard(params));
+  draw(renderPickWizard({ method: "2B_in_person" }));
+});
+route("/pick/new/samples", () => {
+  if (!requireRole(["customer"], () => navigate("/dashboard"))) return;
+  draw(renderPickWizard({ method: "2A_ship_samples" }));
 });
 route("/pick/:id", (params) => {
   if (!requireRole(["customer", "staff"], () => {})) return;

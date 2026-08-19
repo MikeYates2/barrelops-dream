@@ -12,7 +12,7 @@ export function renderMyPicks() {
         el(
           "div",
           { class: "p-6 text-sm text-ivory/45" },
-          "We couldn't find an email on your account. Try logging out and back in, or start a new pick from the Marketplace."
+          "We couldn't find an email on your account. Try logging out and back in, or start a new pick from the sidebar."
         ),
       ]),
     ]);
@@ -30,13 +30,18 @@ export function renderMyPicks() {
           picks.map((p) => {
             const barrel = getBarrel(p.barrelId);
             const phaseInfo = PHASES.find((ph) => ph.n === p.phase);
+            const title = barrel
+              ? barrel.sku
+              : p.pickMethod === "2B_in_person"
+              ? "In-Person Visit"
+              : `${p.sampleBarrelIds.length} Sample${p.sampleBarrelIds.length === 1 ? "" : "s"} Requested`;
             return el(
               "a",
               { href: `#/pick/${p.id}`, class: "block" },
               card([
                 el("div", { class: "p-5 flex items-center justify-between" }, [
                   el("div", {}, [
-                    el("div", { class: "font-serif text-lg text-ivory" }, barrel ? barrel.sku : "Barrel unavailable"),
+                    el("div", { class: "font-serif text-lg text-ivory" }, title),
                     el("div", { class: "text-xs text-ivory/35" }, `Started ${fmtDate(p.createdAt)}`),
                   ]),
                   el("div", { class: "flex items-center gap-2" }, [
@@ -49,11 +54,7 @@ export function renderMyPicks() {
           })
         )
       : card([
-          el("div", { class: "p-6 text-sm text-ivory/45" }, [
-            "No picks yet. ",
-            el("a", { href: "#/", class: "text-gold underline" }, "Browse the marketplace"),
-            " to start one.",
-          ]),
+          el("div", { class: "p-6 text-sm text-ivory/45" }, "No picks yet. Use “Pick In Person” or “Pick Samples” in the sidebar to start one."),
         ]),
   ]);
 }

@@ -53,13 +53,18 @@ function phaseTracker(currentPhase) {
 function summaryCard(pick, barrel) {
   return card([
     el("div", { class: "p-6 space-y-5" }, [
-      el("div", {}, [
-        el("div", { class: "text-[10px] font-semibold text-gold/70 uppercase tracking-[0.2em] mb-1.5" }, "Barrel"),
-        el("div", { class: "font-serif text-xl text-ivory leading-snug" }, barrel.sku),
-        barrel.distilledWhen ? el("div", { class: "text-sm text-ivory/45" }, `Distilled ${barrel.distilledWhen}`) : null,
-        el("div", { class: "text-sm text-ivory/45" }, `Private Group ${fmtMoney(barrel.privateGroupPricing)} · Retail ${fmtMoney(barrel.retailMsrp)} /bottle`),
-      ]),
-      el("div", { class: "h-px bg-white/10" }),
+      // Picks no longer start from a single reserved barrel — an in-person
+      // visit has none until it happens on-site, and a ship-samples pick's
+      // barrels are listed separately below ("Samples Requested").
+      barrel
+        ? el("div", {}, [
+            el("div", { class: "text-[10px] font-semibold text-gold/70 uppercase tracking-[0.2em] mb-1.5" }, "Barrel"),
+            el("div", { class: "font-serif text-xl text-ivory leading-snug" }, barrel.sku),
+            barrel.distilledWhen ? el("div", { class: "text-sm text-ivory/45" }, `Distilled ${barrel.distilledWhen}`) : null,
+            el("div", { class: "text-sm text-ivory/45" }, `Private Group ${fmtMoney(barrel.privateGroupPricing)} · Retail ${fmtMoney(barrel.retailMsrp)} /bottle`),
+          ])
+        : null,
+      barrel ? el("div", { class: "h-px bg-white/10" }) : null,
       el("div", {}, [
         el("div", { class: "text-[10px] font-semibold text-gold/70 uppercase tracking-[0.2em] mb-1.5" }, "Contact"),
         el("div", { class: "text-sm text-ivory/80" }, pick.contact.name),

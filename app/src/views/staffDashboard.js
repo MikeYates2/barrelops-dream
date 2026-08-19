@@ -142,8 +142,13 @@ export function renderStaffDashboard() {
                 ? picks.map((p) => {
                     const barrel = getBarrel(p.barrelId);
                     const phaseInfo = PHASES.find((ph) => ph.n === p.phase);
+                    const barrelLabel = barrel
+                      ? barrel.sku
+                      : p.pickMethod === "2B_in_person"
+                      ? "In-Person Visit"
+                      : `${p.sampleBarrelIds.length} sample${p.sampleBarrelIds.length === 1 ? "" : "s"}`;
                     return el("tr", { class: "border-b border-white/5 hover:bg-white/[0.03]" }, [
-                      el("td", { class: "px-4 py-3 font-medium text-ivory max-w-[16rem] truncate" }, barrel ? barrel.sku : "—"),
+                      el("td", { class: "px-4 py-3 font-medium text-ivory max-w-[16rem] truncate" }, barrelLabel),
                       el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, p.contact.name),
                       el("td", { class: "px-4 py-3" }, badge(p.contact.groupType === "retailer" ? "Retailer" : "Private Group", "blue")),
                       el("td", { class: "px-4 py-3 text-ivory/50 whitespace-nowrap" }, p.pickMethod === "2B_in_person" ? "In-Person" : "Ship Samples"),

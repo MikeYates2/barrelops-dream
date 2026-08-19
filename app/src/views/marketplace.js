@@ -1,5 +1,5 @@
-import { getState, requestMembership, updateBarrel } from "../store.js";
-import { el, badge, button, fmtMoney, card, sectionHeading, textInput, selectInput } from "../ui.js";
+import { getState, updateBarrel } from "../store.js";
+import { el, badge, button, fmtMoney, card, sectionHeading, selectInput } from "../ui.js";
 import { navigate } from "../router.js";
 
 const STATUS_TONE = {
@@ -75,10 +75,6 @@ function heroSection() {
             variant: "gold",
             onClick: () => scrollToId("collection"),
           }),
-          button("Request Membership", {
-            variant: "secondary",
-            onClick: () => scrollToId("membership"),
-          }),
         ]),
       ]),
       el("div", { class: "absolute z-10 bottom-8 left-1/2 -translate-x-1/2 text-gold/40 text-2xl animate-bounce" }, "⌄"),
@@ -142,11 +138,7 @@ function barrelCard(b, role, groupType) {
         ]),
         badge(statusLabel, statusTone),
       ]),
-      role === "customer" && b.status === "available"
-        ? button("Reserve This Barrel", { variant: "gold", extraClass: "w-full mt-1", onClick: () => navigate(`/pick/new/${b.id}`) })
-        : role === "staff"
-        ? el("div", { class: "text-[11px] text-ivory/30 tracking-wide mt-1" }, `Listed ${new Date(b.dateAdded).toLocaleDateString()}`)
-        : null,
+      role === "staff" ? el("div", { class: "text-[11px] text-ivory/30 tracking-wide mt-1" }, `Listed ${new Date(b.dateAdded).toLocaleDateString()}`) : null,
     ]),
   ]);
 }
@@ -204,109 +196,6 @@ function darkTable(barrels, onStatusChange) {
     "",
     { glare: false }
   );
-}
-
-function valuesSection() {
-  const values = [
-    { glyph: "◈", title: "Provenance", copy: "Every barrel is traced to its distillery, warehouse, and rickhouse position — no anonymous bulk lots." },
-    { glyph: "✦", title: "Craftsmanship", copy: "Hand-selected for singular character. What you taste in the sample is exactly what ships in the bottle." },
-    { glyph: "◆", title: "Exclusivity", copy: "Never mass-produced. Each barrel is released to one private group or retailer, once, and then it's gone." },
-  ];
-  return el("section", { class: "max-w-6xl mx-auto px-8 py-28" }, [
-    sectionHeading({
-      eyebrow: "What We Stand For",
-      title: "The values behind every pick.",
-      subtitle: "This isn't an inventory system for commodity spirits — it's how we keep a promise to people who care about what's in the glass.",
-    }),
-    el(
-      "div",
-      { class: "grid md:grid-cols-3 gap-6" },
-      values.map((v) =>
-        card(
-          [
-            el("div", { class: "p-8 flex flex-col gap-4" }, [
-              el("span", { class: "text-gold text-3xl" }, v.glyph),
-              el("h3", { class: "font-serif text-2xl text-ivory" }, v.title),
-              el("p", { class: "text-ivory/50 text-sm leading-relaxed" }, v.copy),
-            ]),
-          ],
-          "",
-          { reveal: true }
-        )
-      )
-    ),
-  ]);
-}
-
-function membershipSection() {
-  let submitted = false;
-  const dynamicSlot = el("div", { class: "mt-2 w-full flex justify-center" });
-
-  function drawDynamicSlot() {
-    const name = { value: "" };
-    const email = { value: "" };
-
-    dynamicSlot.replaceChildren(
-      submitted
-        ? el("div", { class: "flex items-center gap-2 text-gold-light" }, [
-            el("span", {}, "✦"),
-            el("span", { class: "text-sm tracking-wide" }, "Request received — we'll be in touch personally."),
-          ])
-        : el(
-            "form",
-            {
-              class: "flex flex-col sm:flex-row gap-3 w-full max-w-md",
-              onsubmit: (e) => {
-                e.preventDefault();
-                if (!name.value.trim() || !email.value.trim()) return;
-                requestMembership({ name: name.value.trim(), email: email.value.trim() });
-                submitted = true;
-                drawDynamicSlot();
-              },
-            },
-            [
-              textInput({
-                type: "text",
-                placeholder: "Your name",
-                class:
-                  "flex-1 rounded-full bg-white/[0.05] border border-white/15 px-4 py-2.5 text-sm text-ivory placeholder:text-ivory/30 focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/50",
-                oninput: (e) => (name.value = e.target.value),
-              }),
-              textInput({
-                type: "email",
-                placeholder: "Email address",
-                class:
-                  "flex-1 rounded-full bg-white/[0.05] border border-white/15 px-4 py-2.5 text-sm text-ivory placeholder:text-ivory/30 focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/50",
-                oninput: (e) => (email.value = e.target.value),
-              }),
-              button("Request Invitation", { variant: "gold", type: "submit", extraClass: "shrink-0" }),
-            ]
-          )
-    );
-  }
-  drawDynamicSlot();
-
-  // The glass panel (and its reveal-on-scroll) is built exactly once — only
-  // dynamicSlot's contents swap between the form and the confirmation state,
-  // so the panel never has to be re-observed by the scroll-reveal watcher.
-  const panel = card(
-    [
-      el("div", { class: "p-10 md:p-14 flex flex-col items-center text-center gap-6" }, [
-        el("span", { class: "text-xs font-semibold tracking-[0.35em] text-gold uppercase" }, "The Dream Spirits Circle"),
-        el("h2", { class: "font-serif text-4xl md:text-5xl text-ivory leading-tight" }, "Membership is by invitation."),
-        el(
-          "p",
-          { class: "text-ivory/50 max-w-lg leading-relaxed" },
-          "Circle members receive first access to new barrels before they're listed, private tasting invitations, and a dedicated concierge for every pick. We keep the list small on purpose."
-        ),
-        dynamicSlot,
-      ]),
-    ],
-    "",
-    { strong: true, reveal: true }
-  );
-
-  return el("section", { class: "max-w-4xl mx-auto px-8 pb-28", id: "membership" }, [panel]);
 }
 
 // Hoisted above renderMarketplace() so they survive the full-route redraw
@@ -419,6 +308,6 @@ export function renderMarketplace() {
     footNote,
   ]);
 
-  const wrap = el("div", {}, [heroSection(), collectionSection, valuesSection(), membershipSection()]);
+  const wrap = el("div", {}, [heroSection(), collectionSection]);
   return wrap;
 }
