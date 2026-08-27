@@ -143,8 +143,17 @@ function barrelCard(b, role, groupType) {
   ]);
 }
 
-function darkTable(barrels, onStatusChange) {
-  const cols = ["SKU", "Distilled When", "Retail MSRP", "Private Group", "Status", "Notes"];
+// The list view's price columns mirror barrelCard's — staff and retailer
+// customers see Retail MSRP alongside their quoted price, private-group
+// customers see only the one price they're quoted. Only staff get an
+// editable status cell; everyone else sees the same read-only badge the
+// showcase cards use.
+function inventoryTable(barrels, role, groupType, onStatusChange) {
+  const isStaff = role === "staff";
+  const hasSecondaryColumn = isStaff || (role === "customer" && groupType === "retailer");
+  const { secondary: sampleSecondary, primary: samplePrimary } = pricingRows(barrels[0] || {}, role, groupType);
+  const cols = ["SKU", "Distilled When", ...(hasSecondaryColumn ? [sampleSecondary.label] : []), samplePrimary.label, "Status", "Notes"];
+
   return card(
     [
       el("div", { class: "overflow-x-auto" }, [
@@ -161,34 +170,41 @@ function darkTable(barrels, onStatusChange) {
           el(
             "tbody",
             {},
-            barrels.map((b) => {
-              // A status the dropdown doesn't offer (in_bottling/sold, set by
-              // the pick workflow) still needs to display correctly, so the
-              // select's own option list always includes the current value.
-              const options = EDITABLE_STATUSES.some((o) => o.value === b.status)
-                ? EDITABLE_STATUSES
-                : [...EDITABLE_STATUSES, { value: b.status, label: (STATUS_TONE[b.status] || STATUS_TONE.available)[0] }];
-              return el("tr", { class: "border-b border-white/5 hover:bg-white/[0.03]" }, [
-                el("td", { class: "px-4 py-3 font-medium text-ivory max-w-xs" }, b.sku),
-                el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, b.distilledWhen || "—"),
-                el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, fmtMoney(b.retailMsrp)),
-                el("td", { class: "px-4 py-3 text-gold-light font-medium whitespace-nowrap" }, fmtMoney(b.privateGroupPricing)),
-                el(
-                  "td",
-                  { class: "px-4 py-3" },
-                  selectInput(options, {
-                    value: b.status,
-                    class:
-                      "rounded-lg bg-white/[0.04] border border-white/15 px-2.5 py-1.5 text-xs text-ivory focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/50 transition-colors [color-scheme:dark]",
-                    onchange: (e) => {
-                      updateBarrel(b.id, { status: e.target.value });
-                      onStatusChange();
-                    },
-                  })
-                ),
-                el("td", { class: "px-4 py-3 text-ivory/40 text-xs max-w-xs truncate" }, b.notes || "—"),
-              ]);
-            })
+            barrels.length
+              ? barrels.map((b) => {
+                  const { secondary, primary } = pricingRows(b, role, groupType);
+                  const [statusLabel, statusTone] = STATUS_TONE[b.status] || STATUS_TONE.available;
+                  // A status the dropdown doesn't offer (in_bottling/sold, set
+                  // by the pick workflow) still needs to display correctly,
+                  // so the select's own option list always includes it.
+                  const options = EDITABLE_STATUSES.some((o) => o.value === b.status)
+                    ? EDITABLE_STATUSES
+                    : [...EDITABLE_STATUSES, { value: b.status, label: statusLabel }];
+                  const statusCell = isStaff
+                    ? el(
+                        "td",
+                        { class: "px-4 py-3" },
+                        selectInput(options, {
+                          value: b.status,
+                          class:
+                            "rounded-lg bg-white/[0.04] border border-white/15 px-2.5 py-1.5 text-xs text-ivory focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/50 transition-colors [color-scheme:dark]",
+                          onchange: (e) => {
+                            updateBarrel(b.id, { status: e.target.value });
+                            onStatusChange();
+                          },
+                        })
+                      )
+                    : el("td", { class: "px-4 py-3" }, badge(statusLabel, statusTone));
+                  return el("tr", { class: "border-b border-white/5 hover:bg-white/[0.03]" }, [
+                    el("td", { class: "px-4 py-3 font-medium text-ivory max-w-xs" }, b.sku),
+                    el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, b.distilledWhen || "—"),
+                    hasSecondaryColumn ? el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, secondary.value) : null,
+                    el("td", { class: "px-4 py-3 text-gold-light font-medium whitespace-nowrap" }, primary.value),
+                    statusCell,
+                    el("td", { class: "px-4 py-3 text-ivory/40 text-xs max-w-xs truncate" }, b.notes || "—"),
+                  ].filter(Boolean));
+                })
+              : el("tr", {}, el("td", { class: "px-4 py-10 text-center text-ivory/30", colSpan: cols.length }, "No barrels match your search."))
           ),
         ]),
       ]),
@@ -204,7 +220,7 @@ function darkTable(barrels, onStatusChange) {
 // would otherwise snap staff back to the Showcase view and clear their
 // search on every single status change.
 let query = "";
-let viewMode = "grid"; // staff can toggle to 'table'
+let viewMode = "grid"; // any signed-in viewer can toggle to 'table' (shown as "List")
 
 export function renderMarketplace() {
   const state = getState();
@@ -225,8 +241,8 @@ export function renderMarketplace() {
     });
 
     const results =
-      viewMode === "table" && state.currentRole === "staff"
-        ? darkTable(barrels, renderResults)
+      viewMode === "table"
+        ? inventoryTable(barrels, state.currentRole, state.customerGroupType, renderResults)
         : barrels.length
         ? el(
             "div",
@@ -276,26 +292,24 @@ export function renderMarketplace() {
   }
 
   const controlsChildren = [el("div", { class: "relative flex-1 min-w-[240px]" }, searchInput)];
-  if (state.currentRole === "staff") {
-    gridBtn = el("button", {
-      textContent: "Showcase",
-      onclick: () => {
-        viewMode = "grid";
-        syncToggleStyles();
-        renderResults();
-      },
-    });
-    tableBtn = el("button", {
-      textContent: "Table",
-      onclick: () => {
-        viewMode = "table";
-        syncToggleStyles();
-        renderResults();
-      },
-    });
-    controlsChildren.push(el("div", { class: "flex gap-1 p-1 rounded-full glass border border-white/10" }, [gridBtn, tableBtn]));
-    syncToggleStyles();
-  }
+  gridBtn = el("button", {
+    textContent: "Showcase",
+    onclick: () => {
+      viewMode = "grid";
+      syncToggleStyles();
+      renderResults();
+    },
+  });
+  tableBtn = el("button", {
+    textContent: "List",
+    onclick: () => {
+      viewMode = "table";
+      syncToggleStyles();
+      renderResults();
+    },
+  });
+  controlsChildren.push(el("div", { class: "flex gap-1 p-1 rounded-full glass border border-white/10" }, [gridBtn, tableBtn]));
+  syncToggleStyles();
 
   const controls = el("div", { class: "flex flex-wrap items-center gap-3 mb-8" }, controlsChildren);
 

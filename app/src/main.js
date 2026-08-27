@@ -90,13 +90,16 @@ function shell(contentNode) {
           navLink("Upload Inventory", "/inventory/upload", "⇧"),
         ]
       : [];
+  // My Account leads the customer nav, ahead of even View Inventory — it's
+  // the first thing a customer sees after logging in and the one page
+  // that's always reachable regardless of profile completeness.
+  const myAccountLink = state.currentRole === "customer" ? [navLink("My Account", "/account", "☺")] : [];
   const customerLinks =
     state.currentRole === "customer"
       ? [
           navAction("Pick In Person", "⌂", () => startPick("2B_in_person")),
           navAction("Pick Samples", "▤", () => startPick("2A_ship_samples")),
           navLink("My Picks", "/my-picks", "◈"),
-          navLink("My Account", "/account", "☺"),
         ]
       : [];
 
@@ -116,6 +119,7 @@ function shell(contentNode) {
         ]),
       ]),
       el("nav", { class: "flex-1 px-3 py-5 space-y-1 overflow-y-auto" }, [
+        ...myAccountLink,
         navLink("View Inventory", "/", "◆"),
         ...staffLinks,
         ...customerLinks,
