@@ -248,7 +248,11 @@ export function renderLogin() {
                     showError(result.error);
                     return;
                   }
-                  navigate("/");
+                  // My Account is always the first thing a customer sees
+                  // after signing in — not just when the profile is
+                  // incomplete — see the route guards in main.js for the
+                  // persistent block on Inventory/Pick routes.
+                  navigate("/account");
                   return;
                 }
 
@@ -274,7 +278,11 @@ export function renderLogin() {
                     showError(result.error);
                     return;
                   }
-                  navigate("/");
+                  // My Account is always the first thing a customer sees
+                  // after signing in — not just when the profile is
+                  // incomplete — see the route guards in main.js for the
+                  // persistent block on Inventory/Pick routes.
+                  navigate("/account");
                   return;
                 }
 

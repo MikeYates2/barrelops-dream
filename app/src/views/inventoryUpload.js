@@ -2,6 +2,71 @@ import { bulkAddBarrels } from "../store.js";
 import { el, card, button } from "../ui.js";
 import { navigate } from "../router.js";
 
+// Excel/PDF parsing pulls in real libraries (SheetJS, pdf.js) that most
+// pages here never need, so they're loaded from a CDN on first use — same
+// pattern as Tailwind in index.html — rather than bundled for every visit.
+const loadedScripts = new Map();
+function loadScript(src) {
+  if (!loadedScripts.has(src)) {
+    loadedScripts.set(
+      src,
+      new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load ${src}`));
+        document.head.appendChild(script);
+      })
+    );
+  }
+  return loadedScripts.get(src);
+}
+
+// Excel -> the same CSV text the rest of this file already knows how to
+// parse, so the one column-mapping/validation path handles every format.
+async function excelToCsv(arrayBuffer) {
+  await loadScript("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js");
+  const workbook = window.XLSX.read(arrayBuffer, { type: "array" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  return window.XLSX.utils.sheet_to_csv(sheet);
+}
+
+// PDFs have no real notion of rows/columns — pdf.js only hands back
+// individual positioned text runs. This reconstructs rows by grouping runs
+// that share a Y position and ordering them left-to-right, which works
+// reasonably well for a PDF that's actually a printed table (e.g. a sheet
+// exported "to PDF") but not for free-flowing text. Comma-joining the
+// result feeds it through the same CSV parser as everything else, so a
+// layout it can't make sense of is reported as a normal parse error rather
+// than silently importing garbage.
+async function pdfToCsv(arrayBuffer) {
+  await loadScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js");
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+  const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const lines = [];
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const { items } = await page.getTextContent();
+    const rowsByY = new Map();
+    items.forEach((item) => {
+      const y = Math.round(item.transform[5]);
+      if (!rowsByY.has(y)) rowsByY.set(y, []);
+      rowsByY.get(y).push(item);
+    });
+    Array.from(rowsByY.keys())
+      .sort((a, b) => b - a) // top to bottom
+      .forEach((y) => {
+        const rowItems = rowsByY.get(y).sort((a, b) => a.transform[4] - b.transform[4]); // left to right
+        const text = rowItems
+          .map((i) => i.str.trim())
+          .filter(Boolean)
+          .join(",");
+        if (text) lines.push(text);
+      });
+  }
+  return lines.join("\n");
+}
+
 // Canonical column -> internal field. Keys are normalized (trimmed,
 // lowercased, whitespace-collapsed) so headers like "Private Group Pricing "
 // or "SKU" all match regardless of the exact case/spacing a real export uses.
@@ -79,6 +144,7 @@ function parseCsv(text) {
 export function renderInventoryUpload() {
   let csvText = "";
   let preview = { rows: [], errors: [] };
+  let isProcessing = false;
 
   const wrap = el("div", { class: "px-8 py-16 max-w-3xl mx-auto" });
 
@@ -95,49 +161,89 @@ export function renderInventoryUpload() {
 
     const fileInput = el("input", {
       type: "file",
-      accept: ".csv,text/csv",
+      accept:
+        ".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.pdf,application/pdf",
       class:
         "text-sm text-ivory/60 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-gold/15 file:text-gold-light file:text-xs file:font-medium hover:file:bg-gold/25 file:cursor-pointer cursor-pointer",
       onchange: (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        const name = file.name.toLowerCase();
+        const isExcel =
+          name.endsWith(".xlsx") || name.endsWith(".xls") || file.type.includes("spreadsheet") || file.type === "application/vnd.ms-excel";
+        const isPdf = name.endsWith(".pdf") || file.type === "application/pdf";
+
+        if (!isExcel && !isPdf) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            csvText = String(reader.result);
+            preview = parseCsv(csvText);
+            draw();
+          };
+          reader.readAsText(file);
+          return;
+        }
+
+        isProcessing = true;
+        preview = { rows: [], errors: [] };
+        draw();
+
         const reader = new FileReader();
-        reader.onload = () => {
-          csvText = String(reader.result);
-          preview = parseCsv(csvText);
+        reader.onload = async () => {
+          try {
+            csvText = isExcel ? await excelToCsv(reader.result) : await pdfToCsv(reader.result);
+            preview = parseCsv(csvText);
+          } catch (err) {
+            preview = {
+              rows: [],
+              errors: [`Could not read that ${isExcel ? "Excel" : "PDF"} file. Try exporting it as CSV instead for the most reliable results.`],
+            };
+          }
+          isProcessing = false;
           draw();
         };
-        reader.readAsText(file);
+        reader.onerror = () => {
+          isProcessing = false;
+          preview = { rows: [], errors: ["Could not read that file."] };
+          draw();
+        };
+        reader.readAsArrayBuffer(file);
       },
     });
 
-    const previewCard =
-      preview.rows.length || preview.errors.length
-        ? card(
-            [
-              el("div", { class: "p-5" }, [
-                preview.errors.length
-                  ? el(
-                      "div",
-                      { class: "text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mb-3" },
-                      preview.errors.map((e) => el("div", {}, e))
-                    )
-                  : null,
-                preview.rows.length
-                  ? el("div", { class: "text-sm text-noir bg-ivory font-medium rounded-lg px-4 py-2.5" }, `${preview.rows.length} barrel(s) ready to import.`)
-                  : null,
-              ]),
-            ],
-            "mt-4"
-          )
-        : null;
+    const previewCard = isProcessing
+      ? card([el("div", { class: "p-5 text-sm text-ivory/50" }, "Reading file…")], "mt-4")
+      : preview.rows.length || preview.errors.length
+      ? card(
+          [
+            el("div", { class: "p-5" }, [
+              preview.errors.length
+                ? el(
+                    "div",
+                    { class: "text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mb-3" },
+                    preview.errors.map((e) => el("div", {}, e))
+                  )
+                : null,
+              preview.rows.length
+                ? el("div", { class: "text-sm text-noir bg-ivory font-medium rounded-lg px-4 py-2.5" }, `${preview.rows.length} barrel(s) ready to import.`)
+                : null,
+            ]),
+          ],
+          "mt-4"
+        )
+      : null;
 
     const form = card(
       [
         el("div", { class: "p-8 space-y-5" }, [
           el("div", {}, [
-            el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Upload a CSV file"),
+            el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Upload a CSV, Excel, or PDF file"),
             fileInput,
+            el(
+              "p",
+              { class: "text-xs text-ivory/35 mt-2" },
+              "CSV is the most reliable. Excel sheets convert automatically; PDFs work best when the source is an actual table."
+            ),
           ]),
           el("div", { class: "text-xs text-ivory/30" }, "— or paste CSV below —"),
           el("div", {}, [
@@ -173,7 +279,7 @@ export function renderInventoryUpload() {
 
     wrap.replaceChildren(
       el("h1", { class: "font-serif text-4xl text-ivory mb-1" }, "Upload Inventory"),
-      el("p", { class: "text-sm text-ivory/40 mb-8" }, "Bulk-add barrels from a CSV export of the master price list."),
+      el("p", { class: "text-sm text-ivory/40 mb-8" }, "Bulk-add barrels from a CSV, Excel, or PDF export of the master price list."),
       // Node.replaceChildren() stringifies a null arg to the literal text
       // "null" (unlike our el() helper) — previewCard is null until the
       // first Preview click, so it must be filtered out, not passed as-is.

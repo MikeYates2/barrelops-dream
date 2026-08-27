@@ -293,17 +293,30 @@ export function updateCustomerProfile(email, patch) {
   return profile;
 }
 
-// Gates the barrel-less "Pick In Person" / "Pick Samples" entry points —
-// both skip re-asking for contact details, so the profile has to already
-// carry everything a pick would otherwise collect up front.
-export function isCustomerProfileComplete(email) {
+// Every My Account field except social handles is required before a
+// customer can view inventory or schedule a pick — gates both the
+// marketplace route and the barrel-less "Pick In Person" / "Pick Samples"
+// entry points, which skip re-asking for contact details and so need the
+// profile to already carry everything a pick would otherwise collect.
+export function getMissingProfileFields(email) {
   const profile = getCustomerProfile(email);
-  if (!profile) return false;
-  const address = profile.address;
-  const hasAddress = !!(address && address.street && address.city && address.state && address.zip);
-  if (!profile.name || !profile.phone || !hasAddress) return false;
-  if (profile.groupType === "retailer" && !profile.retailerState) return false;
-  return true;
+  if (!profile) return ["Full Name", "Phone", "Street Address", "City", "State", "ZIP Code", "Brand Logo"];
+  const missing = [];
+  if (!profile.name) missing.push("Full Name");
+  if (!profile.phone) missing.push("Phone");
+  if (profile.groupType === "retailer" && !profile.retailerState) missing.push("Licensing State");
+  if (profile.groupType === "private_group" && !profile.groupName) missing.push("Group Name");
+  const address = profile.address || {};
+  if (!address.street) missing.push("Street Address");
+  if (!address.city) missing.push("City");
+  if (!address.state) missing.push("State");
+  if (!address.zip) missing.push("ZIP Code");
+  if (!profile.logo) missing.push("Brand Logo");
+  return missing;
+}
+
+export function isCustomerProfileComplete(email) {
+  return getMissingProfileFields(email).length === 0;
 }
 
 export function loginAsStaff({ name, accessCode }) {

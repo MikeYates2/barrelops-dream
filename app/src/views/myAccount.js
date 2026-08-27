@@ -1,4 +1,4 @@
-import { getState, getCustomerProfile, updateCustomerProfile, setCustomerPassword, RETAILER_STATES } from "../store.js";
+import { getState, getCustomerProfile, updateCustomerProfile, setCustomerPassword, getMissingProfileFields, RETAILER_STATES } from "../store.js";
 import { el, card, button, field, textInput, selectInput } from "../ui.js";
 
 // Saving any of these forms calls a store function that notifies subscribers,
@@ -89,6 +89,11 @@ export function renderMyAccount() {
           }
           if (details.groupType === "retailer" && !details.retailerState) {
             detailsError.textContent = "Please select your licensing state.";
+            detailsError.classList.remove("hidden");
+            return;
+          }
+          if (details.groupType === "private_group" && !details.groupName.trim()) {
+            detailsError.textContent = "Please enter your group name.";
             detailsError.classList.remove("hidden");
             return;
           }
@@ -237,29 +242,44 @@ export function renderMyAccount() {
       ]
     );
 
+    const missingFields = getMissingProfileFields(email);
+    const completionBanner = missingFields.length
+      ? el("div", { class: "text-sm bg-gold/10 border-l-2 border-gold/50 rounded-r-lg px-4 py-3 mb-8" }, [
+          el("div", { class: "font-medium text-gold-light mb-1" }, "Complete your profile to continue"),
+          el(
+            "div",
+            { class: "text-ivory/60" },
+            `You'll need to add: ${missingFields.join(", ")} before you can view inventory or schedule a pick.`
+          ),
+        ])
+      : null;
+
     wrap.replaceChildren(
-      el("h1", { class: "font-serif text-4xl text-ivory mb-1" }, "My Account"),
-      el("p", { class: "text-sm text-ivory/40 mb-8" }, "View and update your saved details."),
-      card([el("div", { class: "p-8" }, [detailsError, detailsSuccess, detailsForm])], "mb-6"),
-      card(
-        [
+      ...[
+        el("h1", { class: "font-serif text-4xl text-ivory mb-1" }, "My Account"),
+        el("p", { class: "text-sm text-ivory/40 mb-8" }, "View and update your saved details."),
+        completionBanner,
+        card([el("div", { class: "p-8" }, [detailsError, detailsSuccess, detailsForm])], "mb-6"),
+        card(
+          [
+            el("div", { class: "p-8" }, [
+              el("h2", { class: "font-serif text-xl text-ivory mb-1" }, "Brand Logo"),
+              el("p", { class: "text-sm text-ivory/40 mb-6" }, "This is the logo that goes on your bottle when a barrel is picked."),
+              logoSection,
+            ]),
+          ],
+          "mb-6"
+        ),
+        card([
           el("div", { class: "p-8" }, [
-            el("h2", { class: "font-serif text-xl text-ivory mb-1" }, "Brand Logo"),
-            el("p", { class: "text-sm text-ivory/40 mb-6" }, "This is the logo that goes on your bottle when a barrel is picked."),
-            logoSection,
+            el("h2", { class: "font-serif text-xl text-ivory mb-1" }, "Password"),
+            el("p", { class: "text-sm text-ivory/40 mb-6" }, "Change the password you use to sign in."),
+            passwordError,
+            passwordSuccess,
+            passwordFormNode,
           ]),
-        ],
-        "mb-6"
-      ),
-      card([
-        el("div", { class: "p-8" }, [
-          el("h2", { class: "font-serif text-xl text-ivory mb-1" }, "Password"),
-          el("p", { class: "text-sm text-ivory/40 mb-6" }, "Change the password you use to sign in."),
-          passwordError,
-          passwordSuccess,
-          passwordFormNode,
         ]),
-      ])
+      ].filter(Boolean)
     );
   }
 

@@ -173,15 +173,27 @@ function requireRole(allowedRoles, onUnauthorized) {
   return true;
 }
 
+// Every My Account field but social handles is required before a customer
+// can view inventory or schedule a pick — this is a persistent block, not
+// just a one-time redirect after login, so it lives on the routes
+// themselves rather than only in the sidebar's click handlers.
+function requireCompleteProfile() {
+  if (getState().currentRole !== "customer") return true;
+  if (isCustomerProfileComplete(getState().currentCustomerEmail)) return true;
+  navigate("/account");
+  return false;
+}
+
 route("/login", () => {
   const role = getState().currentRole;
   if (role === "staff") return navigate("/dashboard");
-  if (role === "customer") return navigate("/");
+  if (role === "customer") return navigate("/account");
   drawBare(renderLogin());
 });
 
 route("/", () => {
   if (!requireRole(["customer", "staff"], () => {})) return;
+  if (!requireCompleteProfile()) return;
   draw(renderMarketplace());
 });
 route("/inventory/new", () => {
@@ -194,10 +206,12 @@ route("/inventory/upload", () => {
 });
 route("/pick/new/in-person", () => {
   if (!requireRole(["customer"], () => navigate("/dashboard"))) return;
+  if (!requireCompleteProfile()) return;
   draw(renderPickWizard({ method: "2B_in_person" }));
 });
 route("/pick/new/samples", () => {
   if (!requireRole(["customer"], () => navigate("/dashboard"))) return;
+  if (!requireCompleteProfile()) return;
   draw(renderPickWizard({ method: "2A_ship_samples" }));
 });
 route("/pick/:id", (params) => {
