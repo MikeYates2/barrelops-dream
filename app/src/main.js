@@ -14,6 +14,14 @@ import { renderStaffDashboard } from "./views/staffDashboard.js";
 
 const appRoot = document.getElementById("app");
 
+// Customer-only sidebar collapse. Hoisted to module scope (like
+// marketplace.js's viewMode/query) so it survives the full-content redraw
+// that store.js's notify() triggers on every mutation, and the most
+// recently drawn content node is kept alongside it so the collapse toggle
+// can re-wrap the *same* page instead of re-running route logic.
+let sidebarCollapsed = false;
+let lastContentNode = null;
+
 function navLink(label, path, icon) {
   const active = currentRoutePath() === path;
   return el(
@@ -80,8 +88,34 @@ function sessionFooter() {
   ]);
 }
 
+function redrawShell() {
+  mount(appRoot, shell(lastContentNode));
+}
+
 function shell(contentNode) {
   const state = getState();
+  const isCustomer = state.currentRole === "customer";
+
+  // Customer sidebar fully hidden — just a small tab on the screen edge to
+  // bring it back. Staff never collapse, so they always get the full shell.
+  if (isCustomer && sidebarCollapsed) {
+    const expandTab = el(
+      "button",
+      {
+        type: "button",
+        class:
+          "fixed top-6 left-0 z-30 flex items-center pl-3 pr-4 py-2.5 rounded-r-full bg-noir-50 border border-white/10 border-l-0 text-ivory/50 hover:text-ivory hover:bg-white/[0.06] transition-colors text-sm",
+        title: "Show sidebar",
+        onclick: () => {
+          sidebarCollapsed = false;
+          redrawShell();
+        },
+      },
+      "»"
+    );
+    return el("div", { class: "flex min-h-screen" }, [expandTab, el("main", { class: "flex-1 min-w-0" }, contentNode)]);
+  }
+
   const staffLinks =
     state.currentRole === "staff"
       ? [
@@ -90,23 +124,41 @@ function shell(contentNode) {
           navLink("Upload Inventory", "/inventory/upload", "⇧"),
         ]
       : [];
-  // My Account leads the customer nav, ahead of even View Inventory — it's
-  // the first thing a customer sees after logging in and the one page
-  // that's always reachable regardless of profile completeness.
-  const myAccountLink = state.currentRole === "customer" ? [navLink("My Account", "/account", "☺")] : [];
-  const customerLinks =
-    state.currentRole === "customer"
-      ? [
-          navAction("Pick In Person", "⌂", () => startPick("2B_in_person")),
-          navAction("Pick Samples", "▤", () => startPick("2A_ship_samples")),
-          navLink("My Picks", "/my-picks", "◈"),
-        ]
-      : [];
+  // Home leads the customer nav, with My Account right behind it — the
+  // first thing a customer sees after logging in and the one page that's
+  // always reachable regardless of profile completeness.
+  const homeLabel = isCustomer ? "Home" : "View Inventory";
+  const customerLinks = isCustomer
+    ? [
+        navLink("My Account", "/account", "☺"),
+        navAction("Pick In Person", "⌂", () => startPick("2B_in_person")),
+        navAction("Pick Samples", "▤", () => startPick("2A_ship_samples")),
+        navLink("My Picks", "/my-picks", "◈"),
+      ]
+    : [];
+
+  const collapseButton = isCustomer
+    ? el(
+        "button",
+        {
+          type: "button",
+          class:
+            "absolute top-6 -right-3 w-6 h-6 rounded-full bg-noir-50 border border-white/15 text-ivory/50 hover:text-ivory hover:border-gold/40 flex items-center justify-center text-xs transition-colors z-30",
+          title: "Hide sidebar",
+          onclick: () => {
+            sidebarCollapsed = true;
+            redrawShell();
+          },
+        },
+        "«"
+      )
+    : null;
 
   const sidebar = el(
     "aside",
-    { class: "w-64 shrink-0 glass border-r border-white/10 flex flex-col h-screen sticky top-0 z-20" },
+    { class: "relative w-64 shrink-0 glass border-r border-white/10 flex flex-col h-screen sticky top-0 z-20" },
     [
+      collapseButton,
       el("div", { class: "px-5 py-6 border-b border-white/10 flex items-center gap-3" }, [
         el("img", {
           src: "/src/assets/dream-spirits-logo.png",
@@ -119,8 +171,7 @@ function shell(contentNode) {
         ]),
       ]),
       el("nav", { class: "flex-1 px-3 py-5 space-y-1 overflow-y-auto" }, [
-        ...myAccountLink,
-        navLink("View Inventory", "/", "◆"),
+        navLink(homeLabel, "/", "◆"),
         ...staffLinks,
         ...customerLinks,
       ]),
@@ -143,6 +194,7 @@ function scrollTopOnce() {
 
 // Authenticated app pages: sidebar + content.
 function draw(contentNode) {
+  lastContentNode = contentNode;
   mount(appRoot, shell(contentNode));
   // Only jump to top on an actual route change. Store mutations (approving a
   // date, saving bottling status, submitting the membership form, etc.) also

@@ -293,14 +293,17 @@ export function updateCustomerProfile(email, patch) {
   return profile;
 }
 
-// Every My Account field except social handles is required before a
-// customer can view inventory or schedule a pick — gates both the
-// marketplace route and the barrel-less "Pick In Person" / "Pick Samples"
-// entry points, which skip re-asking for contact details and so need the
-// profile to already carry everything a pick would otherwise collect.
+// Every My Account field except social handles and the brand logo is
+// required before a customer can view inventory or schedule a pick — gates
+// both the marketplace route and the barrel-less "Pick In Person" / "Pick
+// Samples" entry points, which skip re-asking for contact details and so
+// need the profile to already carry everything a pick would otherwise
+// collect. The logo can still be added later (it's picked up automatically
+// once a pick reaches Label Creation — see applyProfileLogoIfAvailable) but
+// isn't a prerequisite for browsing or scheduling.
 export function getMissingProfileFields(email) {
   const profile = getCustomerProfile(email);
-  if (!profile) return ["Full Name", "Phone", "Street Address", "City", "State", "ZIP Code", "Brand Logo"];
+  if (!profile) return ["Full Name", "Phone", "Street Address", "City", "State", "ZIP Code"];
   const missing = [];
   if (!profile.name) missing.push("Full Name");
   if (!profile.phone) missing.push("Phone");
@@ -311,7 +314,6 @@ export function getMissingProfileFields(email) {
   if (!address.city) missing.push("City");
   if (!address.state) missing.push("State");
   if (!address.zip) missing.push("ZIP Code");
-  if (!profile.logo) missing.push("Brand Logo");
   return missing;
 }
 
@@ -373,6 +375,18 @@ export function updateBarrel(id, patch) {
 
 export function getBarrel(id) {
   return state.barrels.find((b) => b.id === id);
+}
+
+// How many picks have already claimed a sample of this barrel — every pick
+// whose sampleBarrelIds includes it counts once, regardless of pick phase.
+export function sampleUsageCount(barrelId) {
+  return state.picks.filter((p) => Array.isArray(p.sampleBarrelIds) && p.sampleBarrelIds.includes(barrelId)).length;
+}
+
+// null means no quantity has been set — unlimited, not yet tracked.
+export function remainingSampleQuantity(barrel) {
+  if (barrel.quantity == null) return null;
+  return Math.max(0, barrel.quantity - sampleUsageCount(barrel.id));
 }
 
 // ---- Barrel picks (the customer journey) ----
@@ -439,6 +453,14 @@ export function setSampleSelections(id, barrelIds) {
   const p = getPick(id);
   if (!p) return;
   p.sampleBarrelIds = barrelIds;
+  // A barrel with a staff-set quantity that's now fully claimed goes
+  // "Not Available" so no other customer can select it as a sample.
+  barrelIds.forEach((barrelId) => {
+    const barrel = getBarrel(barrelId);
+    if (barrel && barrel.quantity != null && sampleUsageCount(barrelId) >= barrel.quantity) {
+      barrel.status = "not_available";
+    }
+  });
   notify();
 }
 

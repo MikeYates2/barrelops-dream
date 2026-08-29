@@ -1,4 +1,4 @@
-import { getState, updateBarrel } from "../store.js";
+import { getState, updateBarrel, sampleUsageCount } from "../store.js";
 import { el, badge, button, fmtMoney, card, sectionHeading, selectInput } from "../ui.js";
 import { navigate } from "../router.js";
 
@@ -152,7 +152,15 @@ function inventoryTable(barrels, role, groupType, onStatusChange) {
   const isStaff = role === "staff";
   const hasSecondaryColumn = isStaff || (role === "customer" && groupType === "retailer");
   const { secondary: sampleSecondary, primary: samplePrimary } = pricingRows(barrels[0] || {}, role, groupType);
-  const cols = ["SKU", "Distilled When", ...(hasSecondaryColumn ? [sampleSecondary.label] : []), samplePrimary.label, "Status", "Notes"];
+  const cols = [
+    "SKU",
+    "Distilled When",
+    ...(hasSecondaryColumn ? [sampleSecondary.label] : []),
+    samplePrimary.label,
+    ...(isStaff ? ["Quantity"] : []),
+    "Status",
+    "Notes",
+  ];
 
   return card(
     [
@@ -195,11 +203,31 @@ function inventoryTable(barrels, role, groupType, onStatusChange) {
                         })
                       )
                     : el("td", { class: "px-4 py-3" }, badge(statusLabel, statusTone));
+                  const usedCount = sampleUsageCount(b.id);
+                  const quantityCell = isStaff
+                    ? el("td", { class: "px-4 py-3" }, [
+                        el("input", {
+                          type: "number",
+                          min: "0",
+                          placeholder: "Unlimited",
+                          value: b.quantity ?? "",
+                          class:
+                            "w-20 rounded-lg bg-white/[0.04] border border-white/15 px-2.5 py-1.5 text-xs text-ivory placeholder:text-ivory/30 focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/50 transition-colors",
+                          onchange: (e) => {
+                            const raw = e.target.value.trim();
+                            updateBarrel(b.id, { quantity: raw === "" ? null : Math.max(0, Number(raw)) });
+                            onStatusChange();
+                          },
+                        }),
+                        b.quantity != null && usedCount > 0 ? el("div", { class: "text-[10px] text-ivory/35 mt-1" }, `${usedCount} used`) : null,
+                      ])
+                    : null;
                   return el("tr", { class: "border-b border-white/5 hover:bg-white/[0.03]" }, [
                     el("td", { class: "px-4 py-3 font-medium text-ivory max-w-xs" }, b.sku),
                     el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, b.distilledWhen || "—"),
                     hasSecondaryColumn ? el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, secondary.value) : null,
                     el("td", { class: "px-4 py-3 text-gold-light font-medium whitespace-nowrap" }, primary.value),
+                    quantityCell,
                     statusCell,
                     el("td", { class: "px-4 py-3 text-ivory/40 text-xs max-w-xs truncate" }, b.notes || "—"),
                   ].filter(Boolean));

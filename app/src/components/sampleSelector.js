@@ -18,7 +18,11 @@ export function renderSampleSelector({ barrels, selected, lockedId, onChange }) 
 
   function renderRows() {
     const list = barrels.filter((b) => {
-      if (b.status !== "available" && b.id !== lockedId) return false;
+      // A barrel that's gone Not Available (e.g. its sample quantity was
+      // just claimed by someone else) shouldn't offer new selections — but
+      // if it's already checked here, keep showing it so this pick can
+      // still see/uncheck what it already has.
+      if (b.status !== "available" && b.id !== lockedId && !selected.has(b.id)) return false;
       if (!query) return true;
       return `${b.sku} ${b.distilledWhen}`.toLowerCase().includes(query.toLowerCase());
     });
