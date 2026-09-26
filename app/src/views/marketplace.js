@@ -215,7 +215,7 @@ function inventoryTable(barrels, role, groupType, onStatusChange) {
                             "w-20 rounded-lg bg-white/[0.04] border border-white/15 px-2.5 py-1.5 text-xs text-ivory placeholder:text-ivory/30 focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/50 transition-colors",
                           onchange: (e) => {
                             const raw = e.target.value.trim();
-                            updateBarrel(b.id, { quantity: raw === "" ? null : Math.max(0, Number(raw)) });
+                            updateBarrel(b.id, { quantity: raw === "" ? null : Math.max(0, Math.floor(Number(raw))) });
                             onStatusChange();
                           },
                         }),

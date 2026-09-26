@@ -1,4 +1,4 @@
-import { getState, getBarrel, PHASES, returnPickToInventory, pendingCustomerProfiles, approveCustomerProfile } from "../store.js";
+import { getState, getBarrel, PHASES, returnPickToInventory, pendingCustomerProfiles, approveCustomerProfile, rejectCustomerProfile } from "../store.js";
 import { el, card, badge, button, fmtDate } from "../ui.js";
 
 export function renderStaffDashboard() {
@@ -7,6 +7,8 @@ export function renderStaffDashboard() {
   // Id of the pick currently showing its inline "are you sure" prompt in
   // place of the Return to Inventory button — at most one at a time.
   let confirmingId = null;
+  // Email of the pending account showing its inline reject confirmation.
+  let confirmingRejectEmail = null;
 
   const wrap = el("div", { class: "px-8 py-16 max-w-6xl mx-auto" });
 
@@ -81,14 +83,49 @@ export function renderStaffDashboard() {
                       el("span", { class: "text-ivory" }, c.name || "(no name)"),
                       ` <${c.email}> · ${c.groupType === "retailer" ? "Retailer" : "Private Group"}`,
                     ]),
-                    button("Approve", {
-                      variant: "secondary",
-                      extraClass: "!px-3 !py-1.5 !text-xs",
-                      onClick: () => {
-                        approveCustomerProfile(c.email);
-                        draw();
-                      },
-                    }),
+                    el(
+                      "div",
+                      { class: "flex items-center gap-2" },
+                      confirmingRejectEmail === c.email
+                        ? [
+                            el("span", { class: "text-xs text-ivory/50" }, "Reject this account?"),
+                            button("Yes, Reject", {
+                              variant: "secondary",
+                              extraClass: "!px-3 !py-1.5 !text-xs",
+                              onClick: () => {
+                                confirmingRejectEmail = null;
+                                rejectCustomerProfile(c.email);
+                                draw();
+                              },
+                            }),
+                            button("Cancel", {
+                              variant: "ghost",
+                              extraClass: "!px-3 !py-1.5 !text-xs",
+                              onClick: () => {
+                                confirmingRejectEmail = null;
+                                draw();
+                              },
+                            }),
+                          ]
+                        : [
+                            button("Reject", {
+                              variant: "ghost",
+                              extraClass: "!px-3 !py-1.5 !text-xs",
+                              onClick: () => {
+                                confirmingRejectEmail = c.email;
+                                draw();
+                              },
+                            }),
+                            button("Approve", {
+                              variant: "secondary",
+                              extraClass: "!px-3 !py-1.5 !text-xs",
+                              onClick: () => {
+                                approveCustomerProfile(c.email);
+                                draw();
+                              },
+                            }),
+                          ]
+                    ),
                   ])
                 )
               ),

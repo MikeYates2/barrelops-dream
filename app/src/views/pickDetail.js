@@ -306,15 +306,21 @@ function actionPanel(pick, barrel, role, refresh) {
       } else {
         const shippedBarrels = getState().barrels.filter((b) => pick.sampleBarrelIds.includes(b.id));
         const finalSelected = new Set(pick.sampleBarrelIds);
+        const selectionError = el("div", { class: "hidden text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mt-4" }, "Please select at least one sample to move forward with.");
         panels.push(
           card([
             el("div", { class: "p-6" }, [
               ...panelHeading("Confirm Your Selection", "Which of your shipped samples would you like to move forward with? Choose up to 5."),
               renderSampleSelector({ barrels: shippedBarrels, selected: finalSelected, lockedId: pick.barrelId }),
+              selectionError,
               el("div", { class: "pt-4" }, [
                 button("Submit Selection", {
                   variant: "gold",
                   onClick: () => {
+                    if (finalSelected.size === 0) {
+                      selectionError.classList.remove("hidden");
+                      return;
+                    }
                     submitFinalSampleSelections(pick.id, Array.from(finalSelected));
                     refresh();
                   },
@@ -506,7 +512,8 @@ export function renderPickDetail({ id }) {
   function refresh() {
     const pick = getPick(id);
     const state = getState();
-    if (!pick) {
+    const isForeignPick = pick && state.currentRole === "customer" && pick.contact.email.toLowerCase() !== (state.currentCustomerEmail || "").toLowerCase();
+    if (!pick || isForeignPick) {
       wrap.replaceChildren(el("p", { class: "text-ivory/40" }, "Pick not found."));
       return;
     }

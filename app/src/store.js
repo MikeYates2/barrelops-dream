@@ -238,6 +238,9 @@ export function loginAsCustomer({ email, password }) {
   if (profile.approvalStatus === "pending") {
     return { ok: false, pending: true, error: "Your account is awaiting approval from Dream Spirits staff. We'll be in touch once it's ready." };
   }
+  if (profile.approvalStatus === "rejected") {
+    return { ok: false, error: "Your account request wasn't approved. Please contact Dream Spirits staff." };
+  }
   state.currentRole = "customer";
   state.customerName = profile.name;
   state.currentCustomerEmail = profile.email;
@@ -261,6 +264,20 @@ export function setCustomerPassword(email, password) {
   return { ok: true };
 }
 
+// Accepts common US formats ("(502) 555-0123", "502-555-0123", "+1 502 555 0123")
+// — anything with 10 to 15 digits and only phone-style punctuation.
+export function isValidPhone(value) {
+  const v = (value || "").trim();
+  if (!/^\+?[\d\s().-]+$/.test(v)) return false;
+  const digits = v.replace(/\D/g, "").length;
+  return digits >= 10 && digits <= 15;
+}
+
+// US ZIP: 12345 or ZIP+4 (12345-6789).
+export function isValidZip(value) {
+  return /^\d{5}(-\d{4})?$/.test((value || "").trim());
+}
+
 export function pendingCustomerProfiles() {
   return state.customers.filter((c) => c.approvalStatus === "pending");
 }
@@ -269,6 +286,14 @@ export function approveCustomerProfile(email) {
   const profile = getCustomerProfile(email);
   if (!profile) return;
   profile.approvalStatus = "approved";
+  profile.updatedAt = new Date().toISOString();
+  notify();
+}
+
+export function rejectCustomerProfile(email) {
+  const profile = getCustomerProfile(email);
+  if (!profile) return;
+  profile.approvalStatus = "rejected";
   profile.updatedAt = new Date().toISOString();
   notify();
 }
@@ -370,6 +395,9 @@ export function updateBarrel(id, patch) {
   const b = state.barrels.find((x) => x.id === id);
   if (!b) return;
   Object.assign(b, patch);
+  // A manual status choice by staff takes over from the automatic quantity rule.
+  if (patch.status !== undefined) b.autoUnavailable = false;
+  if (patch.quantity !== undefined) syncSampleAvailability(b);
   notify();
 }
 
@@ -381,6 +409,20 @@ export function getBarrel(id) {
 // whose sampleBarrelIds includes it counts once, regardless of pick phase.
 export function sampleUsageCount(barrelId) {
   return state.picks.filter((p) => Array.isArray(p.sampleBarrelIds) && p.sampleBarrelIds.includes(barrelId)).length;
+}
+
+// Keeps a barrel's status in step with its sample quantity: fully claimed
+// (including a quantity of 0) goes Not Available, and it comes back only if
+// that flip was automatic — never over a status staff set by hand.
+function syncSampleAvailability(barrel) {
+  const exhausted = barrel.quantity != null && sampleUsageCount(barrel.id) >= barrel.quantity;
+  if (exhausted && barrel.status === "available") {
+    barrel.status = "not_available";
+    barrel.autoUnavailable = true;
+  } else if (!exhausted && barrel.autoUnavailable) {
+    if (barrel.status === "not_available") barrel.status = "available";
+    barrel.autoUnavailable = false;
+  }
 }
 
 // null means no quantity has been set — unlimited, not yet tracked.
@@ -415,6 +457,13 @@ export function createPick({ barrelId, contact }) {
   state.picks.push(pick);
   notify();
   return pick;
+}
+
+// The barrels a pick is actually about: its single reserved barrel if it has
+// one, otherwise the samples the customer confirmed moving forward with.
+function pickBarrels(p) {
+  const ids = new Set([p.barrelId, ...(p.finalSampleBarrelIds || [])].filter(Boolean));
+  return Array.from(ids).map(getBarrel).filter(Boolean);
 }
 
 export function getPick(id) {
@@ -457,9 +506,7 @@ export function setSampleSelections(id, barrelIds) {
   // "Not Available" so no other customer can select it as a sample.
   barrelIds.forEach((barrelId) => {
     const barrel = getBarrel(barrelId);
-    if (barrel && barrel.quantity != null && sampleUsageCount(barrelId) >= barrel.quantity) {
-      barrel.status = "not_available";
-    }
+    if (barrel) syncSampleAvailability(barrel);
   });
   notify();
 }
@@ -550,8 +597,7 @@ export function updateBottling(id, patch) {
   const p = getPick(id);
   if (!p) return;
   p.bottling = { ...p.bottling, ...patch, updatedAt: new Date().toISOString() };
-  const barrel = getBarrel(p.barrelId);
-  if (barrel) barrel.status = "in_bottling";
+  pickBarrels(p).forEach((b) => (b.status = "in_bottling"));
   notify();
 }
 
@@ -567,8 +613,7 @@ export function markListingComplete(id) {
   if (!p) return;
   p.fulfillment.listingComplete = true;
   p.phase = 7;
-  const barrel = getBarrel(p.barrelId);
-  if (barrel) barrel.status = "sold";
+  pickBarrels(p).forEach((b) => (b.status = "sold"));
   notify();
 }
 
@@ -590,8 +635,7 @@ export function goToPreviousPhase(id) {
   } else if (p.phase === 7) {
     p.phase = 6;
     p.fulfillment.listingComplete = false;
-    const barrel = getBarrel(p.barrelId);
-    if (barrel) barrel.status = "in_bottling";
+    pickBarrels(p).forEach((b) => (b.status = "in_bottling"));
   } else {
     p.phase -= 1;
   }
@@ -608,9 +652,18 @@ export function picksForCustomer(email) {
 export function returnPickToInventory(id) {
   const p = getPick(id);
   if (!p) return;
-  const barrel = getBarrel(p.barrelId);
-  if (barrel) barrel.status = "available";
+  const claimed = pickBarrels(p);
+  const reserved = getBarrel(p.barrelId);
+  if (reserved) reserved.status = "available";
+  claimed.forEach((b) => {
+    if (b.status === "in_bottling" || b.status === "sold") b.status = "available";
+  });
   state.picks = state.picks.filter((x) => x.id !== id);
+  // Cancelling frees the samples this pick had claimed.
+  (p.sampleBarrelIds || []).forEach((barrelId) => {
+    const sampled = getBarrel(barrelId);
+    if (sampled) syncSampleAvailability(sampled);
+  });
   notify();
 }
 

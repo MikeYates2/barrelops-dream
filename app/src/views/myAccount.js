@@ -1,4 +1,4 @@
-import { getState, getCustomerProfile, updateCustomerProfile, setCustomerPassword, getMissingProfileFields, RETAILER_STATES } from "../store.js";
+import { getState, getCustomerProfile, updateCustomerProfile, setCustomerPassword, getMissingProfileFields, isValidPhone, isValidZip, RETAILER_STATES } from "../store.js";
 import { el, card, button, field, textInput, selectInput } from "../ui.js";
 
 // Saving any of these forms calls a store function that notifies subscribers,
@@ -84,6 +84,16 @@ export function renderMyAccount() {
           }
           if (!details.phone.trim()) {
             detailsError.textContent = "Please enter your phone number.";
+            detailsError.classList.remove("hidden");
+            return;
+          }
+          if (!isValidPhone(details.phone)) {
+            detailsError.textContent = "Please enter a valid phone number (at least 10 digits), e.g. 502-555-0123.";
+            detailsError.classList.remove("hidden");
+            return;
+          }
+          if (details.zip.trim() && !isValidZip(details.zip)) {
+            detailsError.textContent = "Please enter a valid ZIP code, e.g. 40202 or 40202-1234.";
             detailsError.classList.remove("hidden");
             return;
           }

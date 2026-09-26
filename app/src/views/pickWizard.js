@@ -8,6 +8,7 @@ import {
   getState,
   getCustomerProfile,
   upsertCustomerProfile,
+  isValidZip,
 } from "../store.js";
 import { el, card, button, field, textInput, fmtStayWindow } from "../ui.js";
 import { renderCalendar } from "../components/calendar.js";
@@ -65,6 +66,10 @@ export function renderPickWizard({ method }) {
       showError("Please fill in your full shipping address.");
       return;
     }
+    if (method === "2A_ship_samples" && !isValidZip(shipping.zip)) {
+      showError("Please enter a valid ZIP code, e.g. 40202 or 40202-1234.");
+      return;
+    }
     errorBox.classList.add("hidden");
 
     // No single barrel starts this pick anymore — for ship-samples, the up-
@@ -93,6 +98,8 @@ export function renderPickWizard({ method }) {
     }
     refreshStayWindowSummary();
 
+    const dateLimitNote = el("p", { class: "hidden text-xs text-gold-light mt-3" }, "You can choose up to 3 arrival dates. Deselect one to pick a different date.");
+
     return card([
       el("div", { class: "p-8" }, [
         el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Select your arrival date(s)"),
@@ -104,11 +111,14 @@ export function renderPickWizard({ method }) {
         renderCalendar({
           selected: selectedDates,
           onToggle: (iso) => {
+            dateLimitNote.classList.add("hidden");
             if (selectedDates.has(iso)) selectedDates.delete(iso);
             else if (selectedDates.size < 3) selectedDates.add(iso);
+            else dateLimitNote.classList.remove("hidden");
             refreshStayWindowSummary();
           },
         }),
+        dateLimitNote,
         stayWindowSummary,
         el("div", { class: "mt-6 pt-6 border-t border-white/10" }, [
           el("label", { class: "flex items-start gap-3 cursor-pointer" }, [
