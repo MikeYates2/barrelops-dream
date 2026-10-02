@@ -4,6 +4,7 @@ import {
   getState,
   approveDate,
   uploadLogo,
+  setLabelType,
   updateBottling,
   advanceToFulfillment,
   markListingComplete,
@@ -18,6 +19,7 @@ import {
 } from "../store.js";
 import { el, card, button, badge, fmtDate, fmtStayWindow, fmtMoney, field, selectInput, textInput } from "../ui.js";
 import { renderSampleSelector } from "../components/sampleSelector.js";
+import { LABEL_GROUPS, LABEL_TYPES, getLabelType } from "../labels.js";
 
 // Every step is clickable — completed, current or upcoming — so anyone can
 // look back at (or ahead to) a step without changing the pick. The step being
@@ -173,13 +175,38 @@ function logoFileInput(pick, refresh) {
   });
 }
 
-// The Dream Spirits label artwork with the customer's logo composited into
-// its blank "Dreamt Up Exclusively For" box. The box position is measured
-// from label-template.png (1600x1010): centered at ~(1304, 268), ~487x168,
-// tilted -0.7deg like the rest of the artwork, so it's expressed in
-// percentages and scales with the image. A PDF can't be drawn as an <img>,
+// Dropdown for choosing which label artwork the pick uses. Saving it redraws
+// the page with the chosen label in the preview.
+function labelTypeSelect(pick, refresh) {
+  const current = getLabelType(pick.labelType).key;
+  const select = el(
+    "select",
+    {
+      class:
+        "w-full rounded-lg bg-white/[0.04] border border-white/15 px-3.5 py-2.5 text-sm text-ivory focus:outline-none focus:ring-1 focus:ring-gold/50 focus:border-gold/50 transition-colors [color-scheme:dark]",
+      onchange: (e) => {
+        setLabelType(pick.id, e.target.value);
+        refresh();
+      },
+    },
+    LABEL_GROUPS.map((group) =>
+      el(
+        "optgroup",
+        { label: group },
+        LABEL_TYPES.filter((t) => t.group === group).map((t) => el("option", { value: t.key, selected: t.key === current }, t.name))
+      )
+    )
+  );
+  return field("Label Type", select, "Choose the label that matches the whiskey you picked.");
+}
+
+// The chosen label artwork with the customer's logo composited into its blank
+// "Dreamt Up Exclusively For" box. The box position comes from labels.js as
+// percentages so it scales with the image. A PDF can't be drawn as an <img>,
 // so it gets a text placeholder in the box instead.
-function labelPreviewCard(logo, title, subtitle) {
+function labelPreviewCard(logo, title, subtitle, labelKey) {
+  const label = getLabelType(labelKey);
+  const { cx, cy, w, h, rot } = label.box;
   const logoNode = !logo
     ? null
     : logo.fileType === "application/pdf"
@@ -189,13 +216,13 @@ function labelPreviewCard(logo, title, subtitle) {
     el("div", { class: "p-6" }, [
       ...panelHeading(title, subtitle),
       el("div", { class: "relative" }, [
-        el("img", { src: "/src/assets/label-template.png", alt: "Dream Spirits label template", class: "w-full rounded-lg border border-white/10 block" }),
+        el("img", { src: label.image, alt: `${label.name} label`, class: "w-full rounded-lg border border-white/10 block" }),
         logoNode
           ? el(
               "div",
               {
                 class: "absolute flex items-center justify-center overflow-hidden bg-white",
-                style: "left:81.47%;top:26.49%;width:30.44%;height:16.63%;padding:1.2%;transform:translate(-50%,-50%) rotate(-0.73deg);",
+                style: `left:${cx}%;top:${cy}%;width:${w}%;height:${h}%;padding:1.2%;transform:translate(-50%,-50%) rotate(${rot}deg);`,
               },
               logoNode
             )
@@ -265,7 +292,7 @@ function phaseReviewPanel(pick, n) {
   }
   if (n === 4) {
     return pick.logo
-      ? labelPreviewCard(pick.logo, title, `Logo on file: ${pick.logo.fileName}`)
+      ? labelPreviewCard(pick.logo, title, `${getLabelType(pick.labelType).name} · Logo on file: ${pick.logo.fileName}`, pick.labelType)
       : message("No logo has been uploaded.");
   }
   if (n === 5) {
@@ -499,12 +526,14 @@ function actionPanel(pick, barrel, role, refresh) {
       panels.push(
         card([
           el("div", { class: "p-6" }, [
-            ...panelHeading("Upload Your Logo", "Upload a logo (PNG, JPG, SVG, or PDF) for your custom label."),
-            logoFileInput(pick, refresh),
+            ...panelHeading("Upload Your Logo", "Choose your label, then upload a logo (PNG, JPG, SVG, or PDF) to place on it."),
+            el("div", { class: "space-y-5" }, [labelTypeSelect(pick, refresh), field("Logo File", logoFileInput(pick, refresh))]),
           ]),
         ])
       );
-      panels.push(labelPreviewCard(null, "Label Template", "Your logo will appear in the blank box marked “Dreamt Up Exclusively For.”"));
+      panels.push(
+        labelPreviewCard(null, "Label Preview", `${getLabelType(pick.labelType).name}. Your logo will appear in the blank box marked “Dreamt Up Exclusively For.”`, pick.labelType)
+      );
     } else if (!pick.logo && role === "staff") {
       panels.push(card([el("div", { class: "p-6" }, panelHeading("Waiting on Logo", "Customer has not uploaded a logo yet."))]));
     } else if (pick.logo) {
@@ -532,6 +561,7 @@ function actionPanel(pick, barrel, role, refresh) {
               ? el("div", { class: "pt-4 mt-1 border-t border-white/10" }, [
                   el("div", { class: "text-sm text-ivory/60 mb-2" }, "Want to use a different logo?"),
                   logoFileInput(pick, refresh),
+                  el("div", { class: "mt-5" }, labelTypeSelect(pick, refresh)),
                 ])
               : null,
             pick.phase === 4 && role === "staff"
@@ -546,7 +576,9 @@ function actionPanel(pick, barrel, role, refresh) {
           ]),
         ])
       );
-      panels.push(labelPreviewCard(pick.logo, "Label Preview", "Your logo placed on the label in the “Dreamt Up Exclusively For” box."));
+      panels.push(
+        labelPreviewCard(pick.logo, "Label Preview", `${getLabelType(pick.labelType).name}. Your logo is placed in the “Dreamt Up Exclusively For” box.`, pick.labelType)
+      );
     }
   }
 

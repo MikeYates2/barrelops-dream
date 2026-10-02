@@ -1,10 +1,12 @@
 // Simple localStorage-backed store with pub/sub. No framework, no build step.
 
+import { LABEL_TYPES } from "./labels.js";
+
 const STORAGE_KEY = "barrelPickOps.v1";
 
 const PHASES = [
   { n: 1, key: "intake", label: "Intake" },
-  { n: 2, key: "method", label: "Choose Pick Method" },
+  { n: 2, key: "method", label: "Pick Method" },
   { n: 3, key: "samples", label: "Sample Fulfillment" },
   { n: 4, key: "label", label: "Label Creation" },
   { n: 5, key: "bottling", label: "Bottling" },
@@ -451,6 +453,7 @@ export function createPick({ barrelId, contact }) {
     houseRulesAcknowledged: false, // in-person only: $5,000 no-barrel-minimum policy
     phase: 1,
     logo: null,
+    labelType: null, // key from labels.js — which label artwork the customer chose; null = default
     bottling: { status: "not_started", bottleCount: null, notes: "", updatedAt: null },
     fulfillment: { listingComplete: false, notes: "" },
   };
@@ -575,6 +578,13 @@ export function advanceToLabelCreation(id) {
   if (!p) return;
   p.phase = 4;
   applyProfileLogoIfAvailable(p);
+  notify();
+}
+
+export function setLabelType(id, key) {
+  const p = getPick(id);
+  if (!p || !LABEL_TYPES.some((t) => t.key === key)) return;
+  p.labelType = key;
   notify();
 }
 
