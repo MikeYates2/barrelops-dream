@@ -19,30 +19,49 @@ import {
 import { el, card, button, badge, fmtDate, fmtStayWindow, fmtMoney, field, selectInput, textInput } from "../ui.js";
 import { renderSampleSelector } from "../components/sampleSelector.js";
 
-function phaseTracker(currentPhase) {
+// Every step is clickable — completed, current or upcoming — so anyone can
+// look back at (or ahead to) a step without changing the pick. The step being
+// viewed gets a ring when it differs from the pick's real current phase.
+function phaseTracker(currentPhase, viewedPhase, onSelect) {
   return el(
     "div",
     { class: "flex items-center mb-10 overflow-x-auto pb-2" },
     PHASES.flatMap((p, i) => {
       const isDone = p.n < currentPhase;
       const isActive = p.n === currentPhase;
+      const isViewed = p.n === viewedPhase;
       const dot = el(
         "div",
         {
-          class: `w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
+          class: `w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold transition-all group-hover:scale-110 ${
             isDone
               ? "bg-ivory text-noir"
               : isActive
               ? "bg-gradient-to-b from-gold-light to-gold-dark text-noir shadow-[0_0_14px_rgba(201,168,106,0.4)]"
               : "bg-white/[0.06] text-ivory/35 border border-white/10"
-          }`,
+          } ${isViewed ? "ring-2 ring-gold-light ring-offset-2 ring-offset-black" : ""}`,
         },
         isDone ? "✓" : String(p.n)
       );
-      const item = el("div", { class: "flex flex-col items-center gap-1.5 shrink-0 w-28" }, [
-        dot,
-        el("span", { class: `text-[11px] text-center tracking-wide ${isActive ? "text-ivory" : "text-ivory/35"}` }, p.label),
-      ]);
+      const item = el(
+        "button",
+        {
+          type: "button",
+          title: `View ${p.label}`,
+          "aria-label": `View ${p.label}`,
+          "aria-current": isViewed || (isActive && viewedPhase == null) ? "step" : null,
+          class: "group flex flex-col items-center gap-1.5 shrink-0 w-28 cursor-pointer focus:outline-none",
+          onclick: () => onSelect(p.n),
+        },
+        [
+          dot,
+          el(
+            "span",
+            { class: `text-[11px] text-center tracking-wide transition-colors group-hover:text-ivory ${isViewed || (isActive && viewedPhase == null) ? "text-ivory" : "text-ivory/35"}` },
+            p.label
+          ),
+        ]
+      );
       return i < PHASES.length - 1
         ? [item, el("div", { class: `flex-1 h-px min-w-[16px] ${isDone ? "bg-ivory/50" : "bg-white/10"}` })]
         : [item];
@@ -119,6 +138,147 @@ function panelHeading(title, subtitle) {
     el("h3", { class: "font-serif text-xl text-ivory mb-1" }, title),
     subtitle ? el("p", { class: "text-sm text-ivory/40 mb-4" }, subtitle) : null,
   ];
+}
+
+const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/svg+xml", "application/pdf"];
+
+// File picker that saves the chosen file as the pick's label logo. Used for
+// the first upload and again for replacing it — uploadLogo overwrites the
+// stored logo and only advances the phase if it hasn't reached Bottling yet.
+function logoFileInput(pick, refresh) {
+  return el("input", {
+    type: "file",
+    accept: LOGO_ALLOWED_TYPES.join(","),
+    class: "text-sm text-ivory/60 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-gold/15 file:text-gold-light file:text-xs file:font-medium hover:file:bg-gold/25 file:cursor-pointer cursor-pointer",
+    onchange: (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!LOGO_ALLOWED_TYPES.includes(file.type)) {
+        alert("Please upload a PNG, JPG, SVG, or PDF file.");
+        e.target.value = "";
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Logo file must be under 5MB.");
+        e.target.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        uploadLogo(pick.id, { fileName: file.name, fileType: file.type, dataUrl: String(reader.result), uploadedAt: new Date().toISOString() });
+        refresh();
+      };
+      reader.readAsDataURL(file);
+    },
+  });
+}
+
+// The Dream Spirits label artwork with the customer's logo composited into
+// its blank "Dreamt Up Exclusively For" box. The box position is measured
+// from label-template.png (1600x1010): centered at ~(1304, 268), ~487x168,
+// tilted -0.7deg like the rest of the artwork, so it's expressed in
+// percentages and scales with the image. A PDF can't be drawn as an <img>,
+// so it gets a text placeholder in the box instead.
+function labelPreviewCard(logo, title, subtitle) {
+  const logoNode = !logo
+    ? null
+    : logo.fileType === "application/pdf"
+    ? el("span", { class: "text-[11px] sm:text-sm font-medium text-noir/70 tracking-wide" }, `PDF logo: ${logo.fileName}`)
+    : el("img", { src: logo.dataUrl, alt: "Your logo", class: "max-w-full max-h-full object-contain" });
+  return card([
+    el("div", { class: "p-6" }, [
+      ...panelHeading(title, subtitle),
+      el("div", { class: "relative" }, [
+        el("img", { src: "/src/assets/label-template.png", alt: "Dream Spirits label template", class: "w-full rounded-lg border border-white/10 block" }),
+        logoNode
+          ? el(
+              "div",
+              {
+                class: "absolute flex items-center justify-center overflow-hidden bg-white",
+                style: "left:81.47%;top:26.49%;width:30.44%;height:16.63%;padding:1.2%;transform:translate(-50%,-50%) rotate(-0.73deg);",
+              },
+              logoNode
+            )
+          : null,
+      ]),
+    ]),
+  ]);
+}
+
+function reviewRow(label, value) {
+  return el("div", {}, [
+    el("div", { class: "text-[10px] font-semibold text-gold/70 uppercase tracking-[0.2em] mb-1" }, label),
+    el("div", { class: "text-sm text-ivory/70" }, value),
+  ]);
+}
+
+function barrelList(ids) {
+  return el(
+    "ul",
+    { class: "space-y-1" },
+    (ids || []).map((id) => {
+      const b = getBarrel(id);
+      return el("li", { class: "text-sm text-ivory/70" }, b ? b.sku : "Barrel unavailable");
+    })
+  );
+}
+
+// Read-only look at a step other than the pick's current one. Deliberately
+// has no buttons that change the pick — the interactive controls only ever
+// appear on the current step (see actionPanel).
+function phaseReviewPanel(pick, n) {
+  const title = PHASES.find((p) => p.n === n).label;
+  const message = (text) => card([el("div", { class: "p-6" }, panelHeading(title, text))]);
+  const detail = (subtitle, rows) => card([el("div", { class: "p-6 space-y-5" }, [...panelHeading(title, subtitle), ...rows.filter(Boolean)])]);
+
+  if (n === 3 && pick.pickMethod === "2B_in_person") return message("Sample fulfillment doesn't apply to in-person visits.");
+  if (n > pick.phase) return message("This step hasn't started yet.");
+
+  if (n === 1) {
+    return detail("Request received.", [
+      reviewRow("Received", fmtDate(pick.createdAt)),
+      reviewRow("Contact", `${pick.contact.name} · ${pick.contact.email}`),
+    ]);
+  }
+  if (n === 2) {
+    return pick.pickMethod === "2B_in_person"
+      ? detail("In-person visit.", [
+          reviewRow("Requested dates", el("div", { class: "flex flex-wrap gap-2" }, (pick.requestedDates || []).map((d) => badge(fmtStayWindow(d), "neutral")))),
+          reviewRow("Confirmed visit", pick.approvedDate ? fmtStayWindow(pick.approvedDate) : "Waiting on staff to confirm a date"),
+          pick.houseRulesAcknowledged ? reviewRow("Minimum-barrel policy", "✓ Acknowledged") : null,
+        ])
+      : detail("Samples shipped by mail.", [
+          pick.shippingAddress
+            ? reviewRow("Shipping address", `${pick.shippingAddress.street}, ${pick.shippingAddress.city}, ${pick.shippingAddress.state} ${pick.shippingAddress.zip}`)
+            : null,
+          reviewRow(`Samples requested (${(pick.sampleBarrelIds || []).length})`, barrelList(pick.sampleBarrelIds)),
+        ]);
+  }
+  if (n === 3) {
+    const finalLabel = pick.finalSampleStatus === "approved" ? "Approved" : pick.finalSampleStatus === "submitted" ? "Submitted — waiting on approval" : "Not submitted yet";
+    return detail("Samples shipped and a final selection made.", [
+      reviewRow("Tracking", pick.sampleTracking || "Not entered yet"),
+      reviewRow(`Samples requested (${(pick.sampleBarrelIds || []).length})`, barrelList(pick.sampleBarrelIds)),
+      reviewRow("Final selection", finalLabel),
+      pick.finalSampleBarrelIds && pick.finalSampleBarrelIds.length ? barrelList(pick.finalSampleBarrelIds) : null,
+    ]);
+  }
+  if (n === 4) {
+    return pick.logo
+      ? labelPreviewCard(pick.logo, title, `Logo on file: ${pick.logo.fileName}`)
+      : message("No logo has been uploaded.");
+  }
+  if (n === 5) {
+    const b = pick.bottling || {};
+    const statusLabel = b.status === "complete" ? "Complete" : b.status === "in_progress" ? "In progress" : "Not started";
+    return detail("Bottling progress.", [
+      reviewRow("Status", statusLabel),
+      reviewRow("Bottle count", b.bottleCount != null ? String(b.bottleCount) : "Not entered"),
+      b.notes ? reviewRow("Notes", b.notes) : null,
+      b.updatedAt ? reviewRow("Last updated", fmtDate(b.updatedAt)) : null,
+    ]);
+  }
+  return message("Payment is settled and the public listing is complete.");
 }
 
 function actionPanel(pick, barrel, role, refresh) {
@@ -340,33 +500,11 @@ function actionPanel(pick, barrel, role, refresh) {
         card([
           el("div", { class: "p-6" }, [
             ...panelHeading("Upload Your Logo", "Upload a logo (PNG, JPG, SVG, or PDF) for your custom label."),
-            el("input", {
-              type: "file",
-              accept: "image/png,image/jpeg,image/svg+xml,application/pdf",
-              class: "text-sm text-ivory/60 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-gold/15 file:text-gold-light file:text-xs file:font-medium hover:file:bg-gold/25 file:cursor-pointer cursor-pointer",
-              onchange: (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const allowedTypes = ["image/png", "image/jpeg", "image/svg+xml", "application/pdf"];
-                if (!allowedTypes.includes(file.type)) {
-                  alert("Please upload a PNG, JPG, SVG, or PDF file.");
-                  return;
-                }
-                if (file.size > 5 * 1024 * 1024) {
-                  alert("Logo file must be under 5MB.");
-                  return;
-                }
-                const reader = new FileReader();
-                reader.onload = () => {
-                  uploadLogo(pick.id, { fileName: file.name, fileType: file.type, dataUrl: String(reader.result), uploadedAt: new Date().toISOString() });
-                  refresh();
-                };
-                reader.readAsDataURL(file);
-              },
-            }),
+            logoFileInput(pick, refresh),
           ]),
         ])
       );
+      panels.push(labelPreviewCard(null, "Label Template", "Your logo will appear in the blank box marked “Dreamt Up Exclusively For.”"));
     } else if (!pick.logo && role === "staff") {
       panels.push(card([el("div", { class: "p-6" }, panelHeading("Waiting on Logo", "Customer has not uploaded a logo yet."))]));
     } else if (pick.logo) {
@@ -389,6 +527,13 @@ function actionPanel(pick, barrel, role, refresh) {
                 )
               : el("img", { src: pick.logo.dataUrl, class: "max-h-32 rounded-lg border border-white/10 mb-2 bg-white/5 p-2" }),
             el("div", { class: "text-xs text-ivory/35 mb-4" }, pick.logo.fileName),
+            // The label hasn't gone to fulfillment yet, so the customer can still swap the logo.
+            role === "customer" && pick.phase <= 5
+              ? el("div", { class: "pt-4 mt-1 border-t border-white/10" }, [
+                  el("div", { class: "text-sm text-ivory/60 mb-2" }, "Want to use a different logo?"),
+                  logoFileInput(pick, refresh),
+                ])
+              : null,
             pick.phase === 4 && role === "staff"
               ? button("Advance to Bottling", {
                   variant: "gold",
@@ -401,6 +546,7 @@ function actionPanel(pick, barrel, role, refresh) {
           ]),
         ])
       );
+      panels.push(labelPreviewCard(pick.logo, "Label Preview", "Your logo placed on the label in the “Dreamt Up Exclusively For” box."));
     }
   }
 
@@ -508,6 +654,9 @@ function actionPanel(pick, barrel, role, refresh) {
 
 export function renderPickDetail({ id }) {
   const wrap = el("div", { class: "px-8 py-16 max-w-4xl mx-auto" });
+  // Which step the tracker is showing; null means the pick's real current
+  // step. Local only — viewing never touches the stored pick.
+  let viewedPhase = null;
 
   function refresh() {
     const pick = getPick(id);
@@ -518,13 +667,18 @@ export function renderPickDetail({ id }) {
       return;
     }
     const barrel = getBarrel(pick.barrelId);
-    const canGoBack = pick.phase > minPickPhase(pick);
+    const viewing = viewedPhase != null && viewedPhase !== pick.phase ? viewedPhase : null;
+    const canGoBack = pick.phase > minPickPhase(pick) && viewing == null;
+    const currentLabel = PHASES.find((p) => p.n === pick.phase).label;
     wrap.replaceChildren(
       ...[
         el("a", { href: state.currentRole === "staff" ? "#/dashboard" : "#/my-picks", class: "text-xs text-gold/70 hover:text-gold transition-colors" }, "← Back"),
         el("h1", { class: "font-serif text-4xl text-ivory mt-3 mb-1" }, `Pick ${pick.id.slice(-6).toUpperCase()}`),
         el("p", { class: "text-sm text-ivory/35 mb-8" }, `Created ${fmtDate(pick.createdAt)}`),
-        phaseTracker(pick.phase),
+        phaseTracker(pick.phase, viewing, (n) => {
+          viewedPhase = n === pick.phase ? null : n;
+          refresh();
+        }),
         canGoBack
           ? el(
               "div",
@@ -540,7 +694,26 @@ export function renderPickDetail({ id }) {
             )
           : null,
         el("div", { class: "grid grid-cols-3 gap-6" }, [
-          el("div", { class: "col-span-2" }, actionPanel(pick, barrel, state.currentRole, refresh)),
+          el(
+            "div",
+            { class: "col-span-2" },
+            viewing == null
+              ? actionPanel(pick, barrel, state.currentRole, refresh)
+              : [
+                  el("div", { class: "flex items-center justify-between gap-3 flex-wrap text-sm bg-gold/10 border-l-2 border-gold/50 rounded-r-lg px-4 py-3 mb-4" }, [
+                    el("span", { class: "text-ivory/70" }, `Viewing “${PHASES.find((p) => p.n === viewing).label}”. This pick is currently on “${currentLabel}”.`),
+                    button("Return to current step", {
+                      variant: "ghost",
+                      extraClass: "text-xs",
+                      onClick: () => {
+                        viewedPhase = null;
+                        refresh();
+                      },
+                    }),
+                  ]),
+                  phaseReviewPanel(pick, viewing),
+                ]
+          ),
           el("div", { class: "col-span-1" }, summaryCard(pick, barrel)),
         ]),
       ].filter(Boolean)
