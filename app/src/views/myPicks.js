@@ -6,7 +6,7 @@ export function renderMyPicks() {
   const email = state.currentCustomerEmail;
 
   if (!email) {
-    return el("div", { class: "px-8 py-16 max-w-2xl mx-auto" }, [
+    return el("div", { class: "px-4 py-8 sm:px-8 sm:py-16 max-w-2xl mx-auto" }, [
       el("h1", { class: "font-serif text-4xl text-ivory mb-2" }, "My Picks"),
       card([
         el(
@@ -20,7 +20,7 @@ export function renderMyPicks() {
 
   const picks = picksForCustomer(email);
 
-  return el("div", { class: "px-8 py-16 max-w-4xl mx-auto" }, [
+  return el("div", { class: "px-4 py-8 sm:px-8 sm:py-16 max-w-4xl mx-auto" }, [
     el("h1", { class: "font-serif text-4xl text-ivory mb-1" }, "My Picks"),
     el("p", { class: "text-sm text-ivory/40 mb-8" }, `Showing picks for ${email}`),
     picks.length

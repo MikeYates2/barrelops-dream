@@ -34,7 +34,7 @@ export function renderBarrelForm() {
 
   const form = el(
     "form",
-    { class: "grid grid-cols-2 gap-4", onsubmit: onSubmit },
+    { class: "grid grid-cols-1 sm:grid-cols-2 gap-4", onsubmit: onSubmit },
     [
       field(
         "SKU",
@@ -62,17 +62,17 @@ export function renderBarrelForm() {
           { value: values.status, onchange: (e) => (values.status = e.target.value) }
         )
       ),
-      el("div", { class: "col-span-2" }, field("Notes", textInput({ type: "text", placeholder: "Optional — restrictions, condition, etc.", oninput: (e) => (values.notes = e.target.value) }))),
-      el("div", { class: "col-span-2 flex gap-3 pt-2" }, [
+      el("div", { class: "sm:col-span-2" }, field("Notes", textInput({ type: "text", placeholder: "Optional — restrictions, condition, etc.", oninput: (e) => (values.notes = e.target.value) }))),
+      el("div", { class: "sm:col-span-2 flex flex-wrap gap-3 pt-2" }, [
         button("Add Barrel", { type: "submit", variant: "gold" }),
         button("Cancel", { variant: "secondary", onClick: () => navigate("/") }),
       ]),
     ]
   );
 
-  return el("div", { class: "px-8 py-16 max-w-2xl mx-auto" }, [
+  return el("div", { class: "px-4 py-8 sm:px-8 sm:py-16 max-w-2xl mx-auto" }, [
     el("h1", { class: "font-serif text-4xl text-ivory mb-1" }, "Add Barrel"),
     el("p", { class: "text-sm text-ivory/40 mb-8" }, "Add a single barrel to the inventory manually."),
-    card([el("div", { class: "p-8" }, [errorBox, form])]),
+    card([el("div", { class: "p-5 sm:p-8" }, [errorBox, form])]),
   ]);
 }

@@ -69,7 +69,7 @@ export function renderCalendar({ selected, onToggle, minDate }) {
           {
             type: "button",
             disabled: isPast,
-            class: `w-9 h-9 rounded-lg text-sm flex items-center justify-center transition-colors ${
+            class: `h-9 w-full sm:w-9 sm:mx-auto rounded-lg text-sm flex items-center justify-center transition-colors ${
               isPast
                 ? "text-ivory/15 cursor-not-allowed"
                 : isSelected

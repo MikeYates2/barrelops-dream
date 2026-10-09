@@ -352,7 +352,7 @@ export function renderLogin() {
     const formCard =
       activeTab === "customer"
         ? card([
-            el("div", { class: "p-8" }, [
+            el("div", { class: "p-5 sm:p-8" }, [
               el("h2", { class: "font-serif text-2xl text-ivory mb-1" }, customerSubState === "pending" ? "Almost there." : "Welcome."),
               el(
                 "p",
@@ -365,7 +365,7 @@ export function renderLogin() {
             ]),
           ])
         : card([
-            el("div", { class: "p-8" }, [
+            el("div", { class: "p-5 sm:p-8" }, [
               el("h2", { class: "font-serif text-2xl text-ivory mb-1" }, "Staff Sign In"),
               el("p", { class: "text-sm text-ivory/40 mb-6" }, "For Dream Spirits team members only."),
               el(

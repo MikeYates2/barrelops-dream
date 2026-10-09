@@ -21,6 +21,16 @@ const appRoot = document.getElementById("app");
 // can re-wrap the *same* page instead of re-running route logic.
 let sidebarCollapsed = false;
 let lastContentNode = null;
+// Phone/tablet slide-in menu. Below the lg breakpoint the sidebar becomes an
+// off-canvas drawer behind a top-bar button; desktop keeps the sticky sidebar.
+let mobileNavOpen = false;
+let lastDrawnPath = null;
+
+function closeMobileNav() {
+  if (!mobileNavOpen) return;
+  mobileNavOpen = false;
+  redrawShell();
+}
 
 function navLink(label, path, icon) {
   const active = currentRoutePath() === path;
@@ -28,6 +38,7 @@ function navLink(label, path, icon) {
     "a",
     {
       href: `#${path}`,
+      onclick: closeMobileNav,
       class: `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm tracking-wide transition-all duration-300 ${
         active
           ? "bg-gradient-to-r from-gold/20 to-transparent text-gold-light border border-gold/25 shadow-[0_0_20px_rgba(201,168,106,0.12)]"
@@ -48,7 +59,10 @@ function navAction(label, icon, onClick) {
       type: "button",
       class:
         "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm tracking-wide transition-all duration-300 text-ivory/50 hover:text-ivory hover:bg-white/[0.04] border border-transparent text-left",
-      onclick: onClick,
+      onclick: () => {
+        closeMobileNav();
+        onClick();
+      },
     },
     [el("span", { class: "text-base leading-none opacity-80" }, icon), label]
   );
@@ -74,7 +88,7 @@ function sessionFooter() {
   const state = getState();
   const isStaff = state.currentRole === "staff";
   const name = isStaff ? state.staffName : state.customerName;
-  return el("div", { class: "px-4 py-5 border-t border-white/10" }, [
+  return el("div", { class: "px-4 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-white/10" }, [
     el("div", { class: "text-[10px] font-semibold text-ivory/30 uppercase tracking-[0.2em] mb-1.5" }, isStaff ? "Dream Staff" : "Customer"),
     el("div", { class: "text-sm text-ivory truncate mb-3" }, name || ""),
     button("Log Out", {
@@ -95,26 +109,28 @@ function redrawShell() {
 function shell(contentNode) {
   const state = getState();
   const isCustomer = state.currentRole === "customer";
+  // Desktop-only: a collapsed customer sidebar is hidden from md up, but the
+  // same element still serves as the phone drawer.
+  const desktopHidden = isCustomer && sidebarCollapsed;
 
-  // Customer sidebar fully hidden — just a small tab on the screen edge to
-  // bring it back. Staff never collapse, so they always get the full shell.
-  if (isCustomer && sidebarCollapsed) {
-    const expandTab = el(
-      "button",
-      {
-        type: "button",
-        class:
-          "fixed top-6 left-0 z-30 flex items-center pl-3 pr-4 py-2.5 rounded-r-full bg-noir-50 border border-white/10 border-l-0 text-ivory/50 hover:text-ivory hover:bg-white/[0.06] transition-colors text-sm",
-        title: "Show sidebar",
-        onclick: () => {
-          sidebarCollapsed = false;
-          redrawShell();
+  // Small tab on the screen edge to bring a collapsed desktop sidebar back.
+  const expandTab = desktopHidden
+    ? el(
+        "button",
+        {
+          type: "button",
+          class:
+            "hidden lg:flex fixed top-6 left-0 z-30 items-center pl-3 pr-4 py-2.5 rounded-r-full bg-noir-50 border border-white/10 border-l-0 text-ivory/50 hover:text-ivory hover:bg-white/[0.06] transition-colors text-sm",
+          title: "Show sidebar",
+          "aria-label": "Show sidebar",
+          onclick: () => {
+            sidebarCollapsed = false;
+            redrawShell();
+          },
         },
-      },
-      "»"
-    );
-    return el("div", { class: "flex min-h-screen" }, [expandTab, el("main", { class: "flex-1 min-w-0" }, contentNode)]);
-  }
+        "»"
+      )
+    : null;
 
   const staffLinks =
     state.currentRole === "staff"
@@ -143,8 +159,9 @@ function shell(contentNode) {
         {
           type: "button",
           class:
-            "absolute top-6 -right-3 w-6 h-6 rounded-full bg-noir-50 border border-white/15 text-ivory/50 hover:text-ivory hover:border-gold/40 flex items-center justify-center text-xs transition-colors z-30",
+            "hidden lg:flex absolute top-6 -right-3 w-6 h-6 rounded-full bg-noir-50 border border-white/15 text-ivory/50 hover:text-ivory hover:border-gold/40 items-center justify-center text-xs transition-colors z-30",
           title: "Hide sidebar",
+          "aria-label": "Hide sidebar",
           onclick: () => {
             sidebarCollapsed = true;
             redrawShell();
@@ -154,11 +171,27 @@ function shell(contentNode) {
       )
     : null;
 
+  const closeDrawerButton = el(
+    "button",
+    {
+      type: "button",
+      class: "lg:hidden absolute top-2 right-2 z-10 w-8 h-8 rounded-full text-ivory/60 hover:text-ivory hover:bg-white/[0.06] flex items-center justify-center text-xl leading-none",
+      "aria-label": "Close menu",
+      onclick: closeMobileNav,
+    },
+    "×"
+  );
+
   const sidebar = el(
     "aside",
-    { class: "relative w-64 shrink-0 glass border-r border-white/10 flex flex-col h-screen sticky top-0 z-20" },
+    {
+      class: `glass border-r border-white/10 flex flex-col w-64 max-w-[85vw] shrink-0 bg-[#0d0d0d]
+        fixed inset-y-0 left-0 z-50 transition-transform duration-300 ${mobileNavOpen ? "translate-x-0" : "-translate-x-full"}
+        lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:z-20 lg:transition-none ${desktopHidden ? "lg:hidden" : ""}`,
+    },
     [
       collapseButton,
+      closeDrawerButton,
       el("div", { class: "px-5 py-6 border-b border-white/10 flex items-center gap-3" }, [
         el("img", {
           src: "/src/assets/dream-spirits-logo.png",
@@ -170,16 +203,39 @@ function shell(contentNode) {
           el("div", { class: "text-[10px] text-gold/70 tracking-[0.2em] uppercase" }, "Barrel Pick Ops"),
         ]),
       ]),
-      el("nav", { class: "flex-1 px-3 py-5 space-y-1 overflow-y-auto" }, [
-        navLink(homeLabel, "/", "◆"),
-        ...staffLinks,
-        ...customerLinks,
-      ]),
+      el("nav", { class: "flex-1 px-3 py-5 space-y-1 overflow-y-auto" }, [navLink(homeLabel, "/", "◆"), ...staffLinks, ...customerLinks]),
       sessionFooter(),
     ]
   );
 
-  return el("div", { class: "flex min-h-screen" }, [sidebar, el("main", { class: "flex-1 min-w-0" }, contentNode)]);
+  // Phone-only top bar with the menu button, plus a tap-to-close backdrop.
+  const topBar = el("header", { class: "lg:hidden sticky top-0 z-30 flex items-center gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-white/10 bg-noir/85 backdrop-blur" }, [
+    el("img", { src: "/src/assets/dream-spirits-logo.png", alt: "", class: "w-9 h-9 rounded-md object-contain shrink-0" }),
+    el("div", { class: "font-serif text-lg text-ivory leading-tight tracking-wide" }, "Dream Spirits"),
+    el(
+      "button",
+      {
+        type: "button",
+        class: "ml-auto w-10 h-10 -mr-2 rounded-full text-ivory/70 hover:text-ivory hover:bg-white/[0.06] flex items-center justify-center text-xl leading-none",
+        "aria-label": "Open menu",
+        "aria-expanded": mobileNavOpen ? "true" : "false",
+        onclick: () => {
+          mobileNavOpen = true;
+          redrawShell();
+        },
+      },
+      "☰"
+    ),
+  ]);
+  const backdrop = mobileNavOpen ? el("div", { class: "lg:hidden fixed inset-0 z-40 bg-black/70", onclick: closeMobileNav }) : null;
+
+  return el("div", { class: "flex flex-col lg:flex-row min-h-screen" }, [
+    topBar,
+    backdrop,
+    sidebar,
+    expandTab,
+    el("main", { class: "flex-1 min-w-0" }, contentNode),
+  ]);
 }
 
 let lastScrolledPath = null;
@@ -195,6 +251,9 @@ function scrollTopOnce() {
 // Authenticated app pages: sidebar + content.
 function draw(contentNode) {
   lastContentNode = contentNode;
+  const path = currentRoutePath();
+  if (path !== lastDrawnPath) mobileNavOpen = false;
+  lastDrawnPath = path;
   mount(appRoot, shell(contentNode));
   // Only jump to top on an actual route change. Store mutations (approving a
   // date, saving bottling status, submitting the membership form, etc.) also
@@ -289,6 +348,10 @@ route("/dashboard", () => {
 notFoundRoute(() => {
   if (getState().currentRole == null) return navigate("/login");
   draw(el("div", { class: "p-10 text-ivory/50" }, "Page not found. ", el("a", { href: "#/", class: "text-gold underline" }, "Go home")));
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeMobileNav();
 });
 
 subscribe(() => {

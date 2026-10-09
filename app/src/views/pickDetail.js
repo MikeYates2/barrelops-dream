@@ -25,7 +25,9 @@ import { LABEL_GROUPS, LABEL_TYPES, getLabelType } from "../labels.js";
 // look back at (or ahead to) a step without changing the pick. The step being
 // viewed gets a ring when it differs from the pick's real current phase.
 function phaseTracker(currentPhase, viewedPhase, onSelect) {
-  return el(
+  const focusPhase = viewedPhase != null ? viewedPhase : currentPhase;
+  let focusNode = null;
+  const tracker = el(
     "div",
     { class: "flex items-center mb-10 overflow-x-auto pb-2" },
     PHASES.flatMap((p, i) => {
@@ -64,11 +66,20 @@ function phaseTracker(currentPhase, viewedPhase, onSelect) {
           ),
         ]
       );
+      if (p.n === focusPhase) focusNode = item;
       return i < PHASES.length - 1
         ? [item, el("div", { class: `flex-1 h-px min-w-[16px] ${isDone ? "bg-ivory/50" : "bg-white/10"}` })]
         : [item];
     })
   );
+  // On a narrow screen the seven steps scroll sideways — start with the one
+  // that matters centered rather than always at Intake.
+  requestAnimationFrame(() => {
+    if (focusNode && tracker.scrollWidth > tracker.clientWidth) {
+      tracker.scrollLeft = focusNode.offsetLeft - (tracker.clientWidth - focusNode.offsetWidth) / 2;
+    }
+  });
+  return tracker;
 }
 
 function summaryCard(pick, barrel) {
@@ -592,7 +603,7 @@ function actionPanel(pick, barrel, role, refresh) {
         card([
           el("div", { class: "p-6" }, [
             ...panelHeading("Update Bottling Status", "Updating this also reflects on the barrel listing in the marketplace."),
-            el("div", { class: "grid grid-cols-2 gap-4" }, [
+            el("div", { class: "grid grid-cols-1 sm:grid-cols-2 gap-4" }, [
               field(
                 "Bottling Status",
                 selectInput(
@@ -607,7 +618,7 @@ function actionPanel(pick, barrel, role, refresh) {
               field("Bottle Count", textInput({ type: "number", min: "0", value: countVal, oninput: (e) => (countVal = e.target.value) })),
             ]),
             el("div", { class: "mt-4" }, field("Notes", textInput({ type: "text", value: notesVal, placeholder: "Optional notes", oninput: (e) => (notesVal = e.target.value) }))),
-            el("div", { class: "flex gap-3 pt-6" }, [
+            el("div", { class: "flex flex-wrap gap-3 pt-6" }, [
               button("Save Status", {
                 variant: "secondary",
                 onClick: () => {
@@ -685,7 +696,7 @@ function actionPanel(pick, barrel, role, refresh) {
 }
 
 export function renderPickDetail({ id }) {
-  const wrap = el("div", { class: "px-8 py-16 max-w-4xl mx-auto" });
+  const wrap = el("div", { class: "px-4 py-8 sm:px-8 sm:py-16 max-w-5xl mx-auto" });
   // Which step the tracker is showing; null means the pick's real current
   // step. Local only — viewing never touches the stored pick.
   let viewedPhase = null;
@@ -725,10 +736,10 @@ export function renderPickDetail({ id }) {
               })
             )
           : null,
-        el("div", { class: "grid grid-cols-3 gap-6" }, [
+        el("div", { class: "grid grid-cols-1 xl:grid-cols-3 gap-6" }, [
           el(
             "div",
-            { class: "col-span-2" },
+            { class: "xl:col-span-2" },
             viewing == null
               ? actionPanel(pick, barrel, state.currentRole, refresh)
               : [
@@ -746,7 +757,7 @@ export function renderPickDetail({ id }) {
                   phaseReviewPanel(pick, viewing),
                 ]
           ),
-          el("div", { class: "col-span-1" }, summaryCard(pick, barrel)),
+          el("div", { class: "xl:col-span-1" }, summaryCard(pick, barrel)),
         ]),
       ].filter(Boolean)
     );

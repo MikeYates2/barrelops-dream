@@ -41,7 +41,7 @@ export function renderMyAccount() {
   const passwordError = el("div", { class: "hidden text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mb-4" });
   const passwordSuccess = el("div", { class: "hidden text-sm text-gold-light bg-gold/10 border-l-2 border-gold/50 rounded-r-lg px-4 py-2.5 mb-4" }, "Password updated.");
 
-  const wrap = el("div", { class: "px-8 py-16 max-w-2xl mx-auto" });
+  const wrap = el("div", { class: "px-4 py-8 sm:px-8 sm:py-16 max-w-2xl mx-auto" });
 
   function draw() {
     detailsError.classList.add("hidden");
@@ -122,7 +122,7 @@ export function renderMyAccount() {
         },
       },
       [
-        el("div", { class: "grid grid-cols-2 gap-5" }, [
+        el("div", { class: "grid grid-cols-1 sm:grid-cols-2 gap-5" }, [
           field("Full Name", textInput({ type: "text", value: details.name, oninput: (e) => (details.name = e.target.value) })),
           field("Email", textInput({ type: "email", value: email, disabled: true, class: "w-full rounded-lg bg-white/[0.02] border border-white/10 px-3.5 py-2.5 text-sm text-ivory/40 cursor-not-allowed" }), "Contact Dream Spirits staff to change your email."),
           field("Phone", textInput({ type: "tel", value: details.phone, oninput: (e) => (details.phone = e.target.value) })),
@@ -147,15 +147,15 @@ export function renderMyAccount() {
         ]),
         el("div", { class: "h-px bg-white/10" }),
         el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest" }, "Shipping Address"),
-        el("div", { class: "grid grid-cols-2 gap-5" }, [
-          el("div", { class: "col-span-2" }, field("Street Address", textInput({ type: "text", value: details.street, oninput: (e) => (details.street = e.target.value) }))),
+        el("div", { class: "grid grid-cols-1 sm:grid-cols-2 gap-5" }, [
+          el("div", { class: "sm:col-span-2" }, field("Street Address", textInput({ type: "text", value: details.street, oninput: (e) => (details.street = e.target.value) }))),
           field("City", textInput({ type: "text", value: details.city, oninput: (e) => (details.city = e.target.value) })),
           field("State", textInput({ type: "text", placeholder: "e.g. KY", value: details.state, oninput: (e) => (details.state = e.target.value) })),
           field("ZIP Code", textInput({ type: "text", value: details.zip, oninput: (e) => (details.zip = e.target.value) })),
         ]),
         el("div", { class: "h-px bg-white/10" }),
         el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest" }, "Social Media"),
-        el("div", { class: "grid grid-cols-3 gap-5" }, [
+        el("div", { class: "grid grid-cols-1 sm:grid-cols-3 gap-5" }, [
           field("Instagram", textInput({ type: "text", placeholder: "@handle", value: details.instagram, oninput: (e) => (details.instagram = e.target.value) })),
           field("Facebook", textInput({ type: "text", placeholder: "@handle", value: details.facebook, oninput: (e) => (details.facebook = e.target.value) })),
           field("TikTok", textInput({ type: "text", placeholder: "@handle", value: details.tiktok, oninput: (e) => (details.tiktok = e.target.value) })),
@@ -244,7 +244,7 @@ export function renderMyAccount() {
         },
       },
       [
-        el("div", { class: "grid grid-cols-2 gap-5" }, [
+        el("div", { class: "grid grid-cols-1 sm:grid-cols-2 gap-5" }, [
           field("New Password", textInput({ type: "password", autocomplete: "new-password", value: passwordForm.newPassword, oninput: (e) => (passwordForm.newPassword = e.target.value) })),
           field("Confirm Password", textInput({ type: "password", autocomplete: "new-password", value: passwordForm.confirmPassword, oninput: (e) => (passwordForm.confirmPassword = e.target.value) })),
         ]),
@@ -269,10 +269,10 @@ export function renderMyAccount() {
         el("h1", { class: "font-serif text-4xl text-ivory mb-1" }, "My Account"),
         el("p", { class: "text-sm text-ivory/40 mb-8" }, "View and update your saved details."),
         completionBanner,
-        card([el("div", { class: "p-8" }, [detailsError, detailsSuccess, detailsForm])], "mb-6"),
+        card([el("div", { class: "p-5 sm:p-8" }, [detailsError, detailsSuccess, detailsForm])], "mb-6"),
         card(
           [
-            el("div", { class: "p-8" }, [
+            el("div", { class: "p-5 sm:p-8" }, [
               el("h2", { class: "font-serif text-xl text-ivory mb-1" }, "Brand Logo"),
               el("p", { class: "text-sm text-ivory/40 mb-6" }, "This is the logo that goes on your bottle when a barrel is picked."),
               logoSection,
@@ -281,7 +281,7 @@ export function renderMyAccount() {
           "mb-6"
         ),
         card([
-          el("div", { class: "p-8" }, [
+          el("div", { class: "p-5 sm:p-8" }, [
             el("h2", { class: "font-serif text-xl text-ivory mb-1" }, "Password"),
             el("p", { class: "text-sm text-ivory/40 mb-6" }, "Change the password you use to sign in."),
             passwordError,

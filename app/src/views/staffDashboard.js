@@ -10,7 +10,7 @@ export function renderStaffDashboard() {
   // Email of the pending account showing its inline reject confirmation.
   let confirmingRejectEmail = null;
 
-  const wrap = el("div", { class: "px-8 py-16 max-w-6xl mx-auto" });
+  const wrap = el("div", { class: "px-4 py-8 sm:px-8 sm:py-16 max-w-6xl mx-auto" });
 
   function draw() {
     const picks = state.picks
@@ -157,7 +157,51 @@ export function renderStaffDashboard() {
         )
       : null;
 
-    const cols = ["Barrel", "Customer", "Type", "Method", "Phase", "Created", "", ""];
+    // Phones show Barrel (with the customer and actions folded into its cell)
+    // and Phase; the other columns appear from xl up (the sidebar takes room at lg).
+    const MD_UP = "hidden xl:table-cell";
+    const cols = [
+      { label: "Barrel" },
+      { label: "Customer", cls: MD_UP },
+      { label: "Type", cls: MD_UP },
+      { label: "Method", cls: MD_UP },
+      { label: "Phase" },
+      { label: "Created", cls: MD_UP },
+      { label: "", cls: MD_UP },
+      { label: "", cls: MD_UP },
+    ];
+
+    const returnControl = (p) =>
+      confirmingId === p.id
+        ? el("div", { class: "flex flex-wrap items-center justify-end gap-2" }, [
+            el("span", { class: "text-xs text-ivory/50" }, "Delete pick?"),
+            button("Confirm", {
+              variant: "danger",
+              extraClass: "!px-3 !py-1.5 !text-xs",
+              onClick: () => {
+                returnPickToInventory(p.id);
+                confirmingId = null;
+                draw();
+              },
+            }),
+            button("Cancel", {
+              variant: "ghost",
+              extraClass: "!px-3 !py-1.5 !text-xs",
+              onClick: () => {
+                confirmingId = null;
+                draw();
+              },
+            }),
+          ])
+        : button("Return to Inventory", {
+            variant: "danger",
+            extraClass: "!px-3 !py-1.5 !text-xs",
+            onClick: () => {
+              confirmingId = p.id;
+              draw();
+            },
+          });
+    const viewLink = (p) => el("a", { href: `#/pick/${p.id}`, class: "text-xs text-gold/80 hover:text-gold underline underline-offset-2" }, "View");
 
     const table = card(
       [
@@ -169,7 +213,7 @@ export function renderStaffDashboard() {
               el(
                 "tr",
                 { class: "border-b border-white/10 text-left text-[10px] font-semibold text-ivory/35 uppercase tracking-[0.15em]" },
-                cols.map((c) => el("th", { class: "px-4 py-3 whitespace-nowrap" }, c))
+                cols.map((c) => el("th", { class: `px-3 sm:px-4 py-3 whitespace-nowrap ${c.cls || ""}` }, c.label))
               )
             ),
             el(
@@ -185,46 +229,18 @@ export function renderStaffDashboard() {
                       ? "In-Person Visit"
                       : `${p.sampleBarrelIds.length} sample${p.sampleBarrelIds.length === 1 ? "" : "s"}`;
                     return el("tr", { class: "border-b border-white/5 hover:bg-white/[0.03]" }, [
-                      el("td", { class: "px-4 py-3 font-medium text-ivory max-w-[16rem] truncate" }, barrelLabel),
-                      el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, p.contact.name),
-                      el("td", { class: "px-4 py-3" }, badge(p.contact.groupType === "retailer" ? "Retailer" : "Private Group", "blue")),
-                      el("td", { class: "px-4 py-3 text-ivory/50 whitespace-nowrap" }, p.pickMethod === "2B_in_person" ? "In-Person" : "Ship Samples"),
-                      el("td", { class: "px-4 py-3" }, badge(phaseInfo ? phaseInfo.label : "—", p.phase === 7 ? "green" : "amber")),
-                      el("td", { class: "px-4 py-3 text-ivory/40 whitespace-nowrap" }, fmtDate(p.createdAt)),
-                      el("td", { class: "px-4 py-3 text-right" }, el("a", { href: `#/pick/${p.id}`, class: "text-xs text-gold/80 hover:text-gold underline underline-offset-2" }, "View")),
-                      el(
-                        "td",
-                        { class: "px-4 py-3 text-right whitespace-nowrap" },
-                        confirmingId === p.id
-                          ? el("div", { class: "flex items-center justify-end gap-2" }, [
-                              el("span", { class: "text-xs text-ivory/50" }, "Delete pick?"),
-                              button("Confirm", {
-                                variant: "danger",
-                                extraClass: "!px-3 !py-1.5 !text-xs",
-                                onClick: () => {
-                                  returnPickToInventory(p.id);
-                                  confirmingId = null;
-                                  draw();
-                                },
-                              }),
-                              button("Cancel", {
-                                variant: "ghost",
-                                extraClass: "!px-3 !py-1.5 !text-xs",
-                                onClick: () => {
-                                  confirmingId = null;
-                                  draw();
-                                },
-                              }),
-                            ])
-                          : button("Return to Inventory", {
-                              variant: "danger",
-                              extraClass: "!px-3 !py-1.5 !text-xs",
-                              onClick: () => {
-                                confirmingId = p.id;
-                                draw();
-                              },
-                            })
-                      ),
+                      el("td", { class: "px-3 sm:px-4 py-3 font-medium text-ivory max-w-[16rem] xl:truncate" }, [
+                        barrelLabel,
+                        el("div", { class: "xl:hidden text-xs font-normal text-ivory/50 mt-0.5" }, p.contact.name),
+                        el("div", { class: "xl:hidden flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 font-normal" }, [viewLink(p), returnControl(p)]),
+                      ]),
+                      el("td", { class: `${MD_UP} px-4 py-3 text-ivory/60 whitespace-nowrap` }, p.contact.name),
+                      el("td", { class: `${MD_UP} px-4 py-3` }, badge(p.contact.groupType === "retailer" ? "Retailer" : "Private Group", "blue")),
+                      el("td", { class: `${MD_UP} px-4 py-3 text-ivory/50 whitespace-nowrap` }, p.pickMethod === "2B_in_person" ? "In-Person" : "Ship Samples"),
+                      el("td", { class: "px-3 sm:px-4 py-3" }, badge(phaseInfo ? phaseInfo.label : "—", p.phase === 7 ? "green" : "amber")),
+                      el("td", { class: `${MD_UP} px-4 py-3 text-ivory/40 whitespace-nowrap` }, fmtDate(p.createdAt)),
+                      el("td", { class: `${MD_UP} px-4 py-3 text-right` }, viewLink(p)),
+                      el("td", { class: `${MD_UP} px-4 py-3 text-right whitespace-nowrap` }, returnControl(p)),
                     ]);
                   })
                 : el("tr", {}, el("td", { class: "px-4 py-10 text-center text-ivory/30", colSpan: cols.length }, "No picks in this stage."))

@@ -41,7 +41,7 @@ export function renderSampleSelector({ barrels, selected, lockedId, onChange }) 
             type: "checkbox",
             checked: isChecked,
             disabled: isDisabled,
-            class: "w-4 h-4 accent-gold-light",
+            class: "w-5 h-5 sm:w-4 sm:h-4 accent-gold-light",
             onchange: (e) => {
               if (e.target.checked) selected.add(b.id);
               else selected.delete(b.id);
@@ -54,9 +54,11 @@ export function renderSampleSelector({ barrels, selected, lockedId, onChange }) 
         el("td", { class: "px-3 py-2 text-sm text-ivory" }, [
           b.sku,
           isLocked ? el("span", { class: "ml-2 text-[10px] text-gold/70 uppercase tracking-wide align-middle" }, "Your Pick") : null,
+          // Phones don't have room for separate columns, so the details sit under the name.
+          el("div", { class: "sm:hidden text-xs text-ivory/45 mt-0.5" }, `${b.distilledWhen || "—"} · ${fmtMoney(b.privateGroupPricing)} /bottle`),
         ]),
-        el("td", { class: "px-3 py-2 text-xs text-ivory/45 whitespace-nowrap" }, b.distilledWhen || "—"),
-        el("td", { class: "px-3 py-2 text-xs text-gold-light whitespace-nowrap" }, `${fmtMoney(b.privateGroupPricing)} /bottle`),
+        el("td", { class: "hidden sm:table-cell px-3 py-2 text-xs text-ivory/45 whitespace-nowrap" }, b.distilledWhen || "—"),
+        el("td", { class: "hidden sm:table-cell px-3 py-2 text-xs text-gold-light whitespace-nowrap" }, `${fmtMoney(b.privateGroupPricing)} /bottle`),
       ]);
     });
 
@@ -68,8 +70,8 @@ export function renderSampleSelector({ barrels, selected, lockedId, onChange }) 
           el("tr", { class: "border-b border-white/10 text-left text-[10px] font-semibold text-ivory/35 uppercase tracking-[0.15em]" }, [
             el("th", { class: "px-3 py-2 w-8" }, ""),
             el("th", { class: "px-3 py-2" }, "SKU"),
-            el("th", { class: "px-3 py-2" }, "Distilled"),
-            el("th", { class: "px-3 py-2" }, "Private Group"),
+            el("th", { class: "hidden sm:table-cell px-3 py-2" }, "Distilled"),
+            el("th", { class: "hidden sm:table-cell px-3 py-2" }, "Private Group"),
           ])
         ),
         el(
@@ -97,6 +99,6 @@ export function renderSampleSelector({ barrels, selected, lockedId, onChange }) 
 
   return el("div", { class: "select-none" }, [
     el("div", { class: "flex items-center gap-3 mb-3" }, [searchInput, countLabel]),
-    el("div", { class: "max-h-64 overflow-y-auto rounded-lg border border-white/10" }, resultsWrap),
+    el("div", { class: "max-h-64 overflow-auto rounded-lg border border-white/10" }, resultsWrap),
   ]);
 }

@@ -146,7 +146,7 @@ export function renderInventoryUpload() {
   let preview = { rows: [], errors: [] };
   let isProcessing = false;
 
-  const wrap = el("div", { class: "px-8 py-16 max-w-3xl mx-auto" });
+  const wrap = el("div", { class: "px-4 py-8 sm:px-8 sm:py-16 max-w-3xl mx-auto" });
 
   function draw() {
     const textarea = el("textarea", {
@@ -235,7 +235,7 @@ export function renderInventoryUpload() {
 
     const form = card(
       [
-        el("div", { class: "p-8 space-y-5" }, [
+        el("div", { class: "p-5 sm:p-8 space-y-5" }, [
           el("div", {}, [
             el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Upload a CSV, Excel, or PDF file"),
             fileInput,
@@ -254,7 +254,7 @@ export function renderInventoryUpload() {
             ),
             textarea,
           ]),
-          el("div", { class: "flex gap-3" }, [
+          el("div", { class: "flex flex-wrap gap-3" }, [
             button("Preview", {
               variant: "secondary",
               onClick: () => {

@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#050505" />
     <title>Dream Spirits — Barrel Pick Ops</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,6 +40,16 @@
     <style>
       html {
         scroll-behavior: smooth;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+      /* Taps register immediately instead of waiting to see if it's a double-tap zoom. */
+      button,
+      a,
+      select,
+      input,
+      label {
+        touch-action: manipulation;
       }
       body {
         font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -133,6 +144,17 @@
       .reveal-in {
         opacity: 1;
         transform: translateY(0);
+      }
+
+      /* ---- Phones ---- */
+      /* iOS Safari zooms the whole page when a focused field's text is under
+         16px; keep fields at 16px on small screens so tapping one doesn't. */
+      @media (max-width: 639px) {
+        input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+        select,
+        textarea {
+          font-size: 16px !important;
+        }
       }
 
       /* ---- Scrollbar ---- */

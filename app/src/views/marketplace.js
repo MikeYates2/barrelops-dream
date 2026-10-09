@@ -40,7 +40,7 @@ function scrollToId(id) {
 function heroSection() {
   return el(
     "section",
-    { class: "relative min-h-[78vh] flex flex-col items-center justify-center text-center px-8 overflow-hidden" },
+    { class: "relative min-h-[78vh] flex flex-col items-center justify-center text-center px-5 sm:px-8 overflow-hidden" },
     [
       // Background photo, desaturated so it stays within the black/white/cream
       // system rather than reintroducing the warm wood tones and blue tags.
@@ -62,12 +62,12 @@ function heroSection() {
         el("span", { class: "text-xs font-semibold tracking-[0.35em] text-gold uppercase" }, "Single Barrel · By Invitation"),
         el(
           "h1",
-          { class: "font-serif text-6xl md:text-7xl leading-[1.05] text-ivory" },
+          { class: "font-serif text-[2.6rem] sm:text-6xl md:text-7xl leading-[1.05] text-ivory" },
           ["Exceptional Barrels.", el("br"), "Where ", el("span", { class: "italic text-gold-light" }, "whiskey dreams"), " come true."]
         ),
         el(
           "p",
-          { class: "text-ivory/50 text-lg max-w-xl leading-relaxed" },
+          { class: "text-ivory/50 text-base sm:text-lg max-w-xl leading-relaxed" },
           "Each barrel in our collection is hand-selected, singularly tracked, and released to a small circle of private groups and retailers who understand what makes it worth waiting for."
         ),
         el("div", { class: "flex items-center gap-4 mt-2" }, [
@@ -152,14 +152,17 @@ function inventoryTable(barrels, role, groupType, onStatusChange) {
   const isStaff = role === "staff";
   const hasSecondaryColumn = isStaff || (role === "customer" && groupType === "retailer");
   const { secondary: sampleSecondary, primary: samplePrimary } = pricingRows(barrels[0] || {}, role, groupType);
+  // On a phone the table keeps SKU, price and status in view: the distilled
+  // date moves under the name and the secondary price and notes are hidden.
+  const SM_UP = "hidden md:table-cell";
   const cols = [
-    "SKU",
-    "Distilled When",
-    ...(hasSecondaryColumn ? [sampleSecondary.label] : []),
-    samplePrimary.label,
-    ...(isStaff ? ["Quantity"] : []),
-    "Status",
-    "Notes",
+    { label: "SKU" },
+    { label: "Distilled When", cls: SM_UP },
+    ...(hasSecondaryColumn ? [{ label: sampleSecondary.label, cls: SM_UP }] : []),
+    { label: samplePrimary.label },
+    ...(isStaff ? [{ label: "Quantity" }] : []),
+    { label: "Status" },
+    { label: "Notes", cls: SM_UP },
   ];
 
   return card(
@@ -172,7 +175,7 @@ function inventoryTable(barrels, role, groupType, onStatusChange) {
             el(
               "tr",
               { class: "border-b border-white/10 text-left text-[10px] font-semibold text-ivory/35 uppercase tracking-[0.15em]" },
-              cols.map((c) => el("th", { class: "px-4 py-3 whitespace-nowrap" }, c))
+              cols.map((c) => el("th", { class: `px-3 sm:px-4 py-3 md:whitespace-nowrap ${c.cls || ""}` }, c.label))
             )
           ),
           el(
@@ -191,7 +194,7 @@ function inventoryTable(barrels, role, groupType, onStatusChange) {
                   const statusCell = isStaff
                     ? el(
                         "td",
-                        { class: "px-4 py-3" },
+                        { class: "px-3 sm:px-4 py-3" },
                         selectInput(options, {
                           value: b.status,
                           class:
@@ -202,10 +205,10 @@ function inventoryTable(barrels, role, groupType, onStatusChange) {
                           },
                         })
                       )
-                    : el("td", { class: "px-4 py-3" }, badge(statusLabel, statusTone));
+                    : el("td", { class: "px-3 sm:px-4 py-3" }, badge(statusLabel, statusTone));
                   const usedCount = sampleUsageCount(b.id);
                   const quantityCell = isStaff
-                    ? el("td", { class: "px-4 py-3" }, [
+                    ? el("td", { class: "px-3 sm:px-4 py-3" }, [
                         el("input", {
                           type: "number",
                           min: "0",
@@ -223,16 +226,19 @@ function inventoryTable(barrels, role, groupType, onStatusChange) {
                       ])
                     : null;
                   return el("tr", { class: "border-b border-white/5 hover:bg-white/[0.03]" }, [
-                    el("td", { class: "px-4 py-3 font-medium text-ivory max-w-xs" }, b.sku),
-                    el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, b.distilledWhen || "—"),
-                    hasSecondaryColumn ? el("td", { class: "px-4 py-3 text-ivory/60 whitespace-nowrap" }, secondary.value) : null,
-                    el("td", { class: "px-4 py-3 text-gold-light font-medium whitespace-nowrap" }, primary.value),
+                    el("td", { class: "px-3 sm:px-4 py-3 font-medium text-ivory max-w-xs" }, [
+                      b.sku,
+                      el("div", { class: "md:hidden text-xs font-normal text-ivory/45 mt-0.5" }, b.distilledWhen || "—"),
+                    ]),
+                    el("td", { class: `${SM_UP} px-3 sm:px-4 py-3 text-ivory/60 whitespace-nowrap` }, b.distilledWhen || "—"),
+                    hasSecondaryColumn ? el("td", { class: `${SM_UP} px-3 sm:px-4 py-3 text-ivory/60 whitespace-nowrap` }, secondary.value) : null,
+                    el("td", { class: "px-3 sm:px-4 py-3 text-gold-light font-medium whitespace-nowrap" }, primary.value),
                     quantityCell,
                     statusCell,
-                    el("td", { class: "px-4 py-3 text-ivory/40 text-xs max-w-xs truncate" }, b.notes || "—"),
+                    el("td", { class: `${SM_UP} px-3 sm:px-4 py-3 text-ivory/40 text-xs max-w-xs truncate` }, b.notes || "—"),
                   ].filter(Boolean));
                 })
-              : el("tr", {}, el("td", { class: "px-4 py-10 text-center text-ivory/30", colSpan: cols.length }, "No barrels match your search."))
+              : el("tr", {}, el("td", { class: "px-3 sm:px-4 py-10 text-center text-ivory/30", colSpan: cols.length }, "No barrels match your search."))
           ),
         ]),
       ]),
@@ -319,7 +325,7 @@ export function renderMarketplace() {
     tableBtn.className = `px-4 py-1.5 rounded-full text-xs tracking-wide transition-colors ${viewMode === "table" ? active : inactive}`;
   }
 
-  const controlsChildren = [el("div", { class: "relative flex-1 min-w-[240px]" }, searchInput)];
+  const controlsChildren = [el("div", { class: "relative flex-1 min-w-[200px]" }, searchInput)];
   gridBtn = el("button", {
     textContent: "Showcase",
     onclick: () => {
@@ -343,7 +349,7 @@ export function renderMarketplace() {
 
   renderResults();
 
-  const collectionSection = el("section", { class: "max-w-6xl mx-auto px-8 py-24", id: "collection" }, [
+  const collectionSection = el("section", { class: "max-w-6xl mx-auto px-4 sm:px-8 py-14 sm:py-24 scroll-mt-14 lg:scroll-mt-0", id: "collection" }, [
     headerRow,
     controls,
     resultsWrap,

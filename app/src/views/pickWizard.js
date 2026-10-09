@@ -42,7 +42,7 @@ export function renderPickWizard({ method }) {
   const sampleBarrelIds = new Set();
   const errorBox = el("div", { class: "hidden text-sm text-ivory bg-white/[0.06] border-l-2 border-white/60 rounded-r-lg px-4 py-2.5 mb-4" });
 
-  const wrap = el("div", { class: "px-8 py-16 max-w-2xl mx-auto" });
+  const wrap = el("div", { class: "px-4 py-8 sm:px-8 sm:py-16 max-w-2xl mx-auto" });
 
   function showError(msg) {
     errorBox.textContent = msg;
@@ -101,7 +101,7 @@ export function renderPickWizard({ method }) {
     const dateLimitNote = el("p", { class: "hidden text-xs text-gold-light mt-3" }, "You can choose up to 3 arrival dates. Deselect one to pick a different date.");
 
     return card([
-      el("div", { class: "p-8" }, [
+      el("div", { class: "p-5 sm:p-8" }, [
         el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Select your arrival date(s)"),
         el(
           "p",
@@ -142,17 +142,17 @@ export function renderPickWizard({ method }) {
 
   function samplesView() {
     return card([
-      el("div", { class: "p-8" }, [
+      el("div", { class: "p-5 sm:p-8" }, [
         el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Select Your Samples"),
         el("p", { class: "text-xs text-ivory/35 mb-4" }, "Choose up to 5 offerings to include in this shipment."),
         renderSampleSelector({ barrels: state.barrels, selected: sampleBarrelIds }),
         el("div", { class: "mt-6 pt-6 border-t border-white/10" }, [
           el("span", { class: "block text-[11px] font-medium text-gold-light/80 uppercase tracking-widest mb-2" }, "Shipping Address"),
           el("p", { class: "text-xs text-ivory/35 mb-4" }, "Where should we send your samples?"),
-          el("div", { class: "grid grid-cols-2 gap-5" }, [
+          el("div", { class: "grid grid-cols-1 sm:grid-cols-2 gap-5" }, [
             el(
               "div",
-              { class: "col-span-2" },
+              { class: "sm:col-span-2" },
               field("Street Address", textInput({ type: "text", value: shipping.street, oninput: (e) => (shipping.street = e.target.value) }))
             ),
             field("City", textInput({ type: "text", value: shipping.city, oninput: (e) => (shipping.city = e.target.value) })),
