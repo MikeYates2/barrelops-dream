@@ -1,0 +1,3 @@
+# The app is plain static files (no build step), served from the app/ folder.
+[build]
+  publish = "app"
